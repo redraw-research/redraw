@@ -1,0 +1,54 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 307.976
+  - 0.0
+  - 320
+  - 0.0
+  - 307.889
+  - 240
+  - 0.0
+  - 0.0
+  - 1.0
+  rows: 3
+camera_name: duckiebot5
+distortion_coefficients:
+  cols: 4
+  data:
+  - -0.0343378
+  - -0.0037801
+  - -0.000456289
+  - -0.000269798
+  rows: 1
+distortion_model: equidistant
+image_height: 480
+image_width: 640
+projection_matrix:
+  cols: 4
+  data:
+  - 307.976
+  - 0.0
+  - 320
+  - 0.0
+  - 0.0
+  - 307.889
+  - 240
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.0
+  rows: 3
+rectification_matrix:
+  cols: 3
+  data:
+  - 1.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  rows: 3

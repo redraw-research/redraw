@@ -1,0 +1,3451 @@
+defaults:
+
+  seed: 0
+  method: name
+  task: dummy_disc
+  logdir: ''   # used to be /dev/null
+  replay: uniform
+  replay_size: 1e6
+  replay_online: False
+  save_replay: False
+  save_eval_replay: False
+  replay_directory_override: ''
+  omit_gt_state_from_replays_where_optional: False
+  freeze_replay: False
+  force_replay_as_real: False
+  load_earliest_replay_steps_first: False
+  eval_dir: ''
+  filter: '.*'
+
+  jax:
+    platform: gpu
+    jit: True
+    precision: float16
+    prealloc: True
+    debug_nans: False
+    logical_cpus: 0
+    debug: False
+    policy_devices: [ 0 ]
+    train_devices: [ 0 ]
+    metrics_every: 10
+    dont_load_weights_prefixes_from_checkpoint: ['']
+
+  run:
+    script: train
+    steps: 1e10
+    expl_until: 0
+    log_every: 300
+    save_every: 100_000
+    eval_every: 1e6
+    eval_initial: True
+    eval_eps: 1
+    eval_samples: 1
+    train_ratio: 32.0
+    train_fill: 0
+    eval_fill: 0
+    log_zeros: False
+    log_keys_video: [ image ]
+    log_keys_sum: '^$'
+    log_keys_mean: '(log_entropy)'
+    log_keys_max: '^$'
+    from_checkpoint: ''
+    sync_every: 10
+    # actor_addr: 'tcp://127.0.0.1:5551'
+    actor_addr: 'ipc:///tmp/5551'
+    actor_batch: 32
+    unique_checkpoints: False
+    save_max_performance_checkpoint: False
+
+  envs: { amount: 4, parallel: process, length: 0, reset: True, restart: False, discretize: 0, checks: False } # original Dreamerv3 had restart: True
+  wrapper: { length: 0, reset: True, discretize: 0, checks: False, framestack_image: 1, framestack_only_image: False, return_as_framestacked_image: False, repeat_after_framestack: 1, sum_rewards_between_action_repeat: True}
+  env:
+    atari: { size: [ 64, 64 ], repeat: 4, sticky: True, gray: False, actions: all, lives: unused, noops: 0, resize: opencv }
+    dmlab: { size: [ 64, 64 ], repeat: 4, episodic: True }
+    minecraft: { size: [ 64, 64 ], break_speed: 100.0 }
+    dmc: { size: [ 64, 64 ], repeat: 2, camera: -1 }
+    dmcsim: { size: [ 64, 64 ], repeat: 2, sum_rewards_between_action_repeat: False, camera: -1, omit_gt_state: False, normalize_gt_state: False, omit_image: False, is_real_env: False }
+    dmcmjxsim: { size: [ 64, 64 ], repeat: 2, sum_rewards_between_action_repeat: False, omit_gt_state: False, internal_state_scale: 1.0 }
+    loconav: { size: [ 64, 64 ], repeat: 2, camera: -1 }
+    metaworld: { size: [ 64, 64 ], repeat: 1, seed: 0, camera: corner, sparse_rewards: False }
+    duckiebotssim: {physics_hz: None, simulate_latency: True, use_mask: True, use_simple_physics: False, use_wheel_bias: False, limit_backwards: False, randomize_camera_location_for_tilted_robot: False, time_limit: 200, separately_return_mask_and_rgb: False, use_rcan_instead_of_gt_mask: False, reverse_actions: False, use_domain_randomization: True, use_alt_game_path: "", use_randomized_synthetic_world: False, reward_function: penalize_turning_more, randomize_physics_every_step: False, randomize_physics_every_episode: False, camera_shake_with_random_physics: False}
+    duckiebotsreal: {use_mask: True, separately_return_mask_and_rgb: False, reverse_actions: False, use_alt_action_processing: False, disable_position_tracking: False, local_ip: "192.168.1.9", measure_rewards_via_sim: False}
+
+  # Agent
+  task_behavior: Greedy
+  expl_behavior: None
+  batch_size: 16
+  batch_length: 64
+  data_loaders: 8
+  data_load_prefetch_source: 4
+  data_load_prefetch_batch: 1
+
+  fault_tolerant_episodic_data_collection: False
+
+  # World Model
+  grad_heads: [ decoder, reward, cont ]
+
+  freeze_encoder: False
+  freeze_posterior: False
+  freeze_vanilla_heads: False
+  freeze_grounded_heads: False
+  freeze_sim_tf: False
+  freeze_wm: False
+
+  rssm: { deter: 4096, units: 1024, stoch: 32, classes: 32, act: silu, norm: layer, initial: learned, unimix: 0.01, unroll: False, action_clip: 1.0, winit: normal, fan: avg, img_hidden_layers: 1, obs_hidden_layers: 0, decode_stoch_params_as_deter: False, posterior_takes_prior_deter_as_input: False, posterior_takes_prior_stoch_as_input: False, residual_should_take_prev_stoch_params_as_input: False, train_student_posterior: False, always_use_student_posterior: False, use_gru_with_prior_belief: False, stoch_params_include_unimix: False, stoch_params_are_raw_logits: False, use_posterior_stoch_params_for_first_state: False, use_posterior_stoch_params_for_all_states: False, dynamics_takes_prev_stoch_as_input: True, dynamics_takes_prev_stoch_params_as_input: True, use_relaxed_categorical_dist: False, relaxed_categorical_temperature: 1.0, residual: 'none', residual_ensemble_size: 7}
+  grounded_rssm: { deter: 4096, units: 1024, stoch: 32, classes: 32, act: silu, norm: layer, initial: learned, unimix: 0.01, unroll: False, action_clip: 1.0, winit: normal, fan: avg, gradients_through_sim_tf: False, img_is_deterministic: False, sg_in_img: False, img_hidden_layers: 1, obs_hidden_layers: 0, decode_stoch_params_as_deter: False, posterior_takes_prior_deter_as_input: False, posterior_takes_prior_stoch_as_input: False, residual_should_take_prev_stoch_params_as_input: False,  train_student_posterior: False, always_use_student_posterior: False, use_gru_with_prior_belief: False, stoch_params_include_unimix: False, use_posterior_stoch_params_for_first_state: False, use_posterior_stoch_params_for_all_states: False, use_relaxed_categorical_dist: False, relaxed_categorical_temperature: 1.0, residual: 'none', residual_ensemble_size: 7 }
+
+  encoder: { mlp_keys: '.*', cnn_keys: '.*', act: silu, norm: layer, mlp_layers: 5, mlp_units: 1024, cnn: resnet, cnn_depth: 96, cnn_blocks: 0, resize: stride, winit: normal, fan: avg, symlog_inputs: True, minres: 4 }
+
+  decoder: { mlp_keys: '.*', cnn_keys: '.*', act: silu, norm: layer, mlp_layers: 5, mlp_units: 1024, cnn: resnet, cnn_depth: 96, cnn_blocks: 0, image_dist: mse, vector_dist: symlog_mse, inputs: [ deter, stoch ],    resize: stride, winit: normal, fan: avg, outscale: 1.0, minres: 4, cnn_sigmoid: False }
+  grounded_decoder: { mlp_keys: '.*', cnn_keys: '.*', act: silu, norm: layer, mlp_layers: 5, mlp_units: 1024, cnn: resnet, cnn_depth: 96, cnn_blocks: 0, image_dist: mse, vector_dist: symlog_mse, inputs: [ symlog_grounded ], resize: stride, winit: normal, fan: avg, outscale: 1.0, minres: 4, cnn_sigmoid: False }
+
+  reward_head: { layers: 5, units: 1024, act: silu, norm: layer, dist: symlog_disc, outscale: 0.0, outnorm: False, inputs: [ deter, stoch ],    winit: normal, fan: avg, bins: 255 }
+  grounded_reward_head: { layers: 5, units: 1024, act: silu, norm: layer, dist: symlog_disc, outscale: 0.0, outnorm: False, inputs: [ symlog_grounded ], winit: normal, fan: avg, bins: 255 }
+
+  cont_head: { layers: 5, units: 1024, act: silu, norm: layer, dist: binary, outscale: 1.0, outnorm: False, inputs: [ deter, stoch ],    winit: normal, fan: avg }
+  grounded_cont_head: { layers: 5, units: 1024, act: silu, norm: layer, dist: binary, outscale: 1.0, outnorm: False, inputs: [ symlog_grounded ], winit: normal, fan: avg }
+
+  grounded_is_valid_head: { layers: 5, units: 1024, act: silu, norm: layer, dist: binary, outscale: 1.0, outnorm: False, inputs: [ symlog_grounded ], winit: normal, fan: avg }
+
+  loss_scales: { image: 1.0, vector: 1.0, reward: 1.0, cont: 1.0, is_valid: 1.0, dyn: 0.5, rep: 0.1, actor: 1.0, critic: 1.0, slowreg: 1.0, supervise_grounded_state: 1.0, residual: 1.0, consistency: 1.0, student_rep: 1.0 }
+  dyn_loss: { impl: kl, free: 1.0 }
+  rep_loss: { impl: kl, free: 1.0 }
+  model_opt: { opt: adam, lr: 1e-4, eps: 1e-8, clip: 1000.0, wd: 0.0, warmup: 0, lateclip: 0.0 }
+  bb_model_opt: { opt: adam, lr: 1e-4, eps: 1e-8, clip: 1000.0, wd: 0.0, warmup: 0, lateclip: 0.0 }
+
+  use_grounded_rssm: False
+
+  # alternate architectures
+  grounded_rssm_is_non_recurrent: False
+  grounded_rssm_is_non_recurrent2: False
+  grounded_rssm_is_non_recurrent3: False
+  grounded_rssm_is_non_recurrent4: False
+  grounded_rssm_is_literal: False
+  grounded_rssm_is_sim_only: False
+  grounded_rssm_is_gt_sim_only: False
+
+  grounded_rssm_replaces_h_with_s: False
+  grounded_rssm_replaces_h_with_s_more_features: False
+  grounded_rssm_replaces_gru: False
+  grounded_rssm_replaces_gru2: False
+  grounded_rssm_replaces_gru2_more_layers_to_get_symlog_grounded: False
+  grounded_rssm_replaces_gru3: False
+  grounded_rssm_replaces_gru3_more_layers_to_get_symlog_grounded: False
+
+  grounded_rssm_s_from_z_only: False
+  grounded_rssm_s_from_z_only_orig_size_network: False
+  grounded_rssm_s_from_z_non_sequential_posterior: False
+  grounded_rssm_s_from_z_non_sequential_posterior_no_action: False
+  grounded_rssm_s_from_z_non_sequential_posterior_mlp_prior: False
+  grounded_rssm_s_from_z_non_sequential_posterior_mlp_prior_larger: False
+  grounded_rssm_s_from_z_non_sequential_posterior_post_produces_h: False
+  grounded_rssm_s_from_z_non_sequential_posterior_post_produces_h2: False
+  grounded_rssm_larger_get_grounded: False
+  grounded_rssm_stoch_only_larger_mlp_prior_with_prior_belief: False
+  deterministic_z_only_dreamer_model: False
+  rssm_regularized_deter: False
+  rssm_regularized_deter_no_unimix_on_deter: False
+
+  td_deterministic_model: False
+  td_deterministic_model_small: False
+  td_stochastic_model: False
+  td_dummy_stochastic_model: False
+  td_compressed_stochastic_model: False
+  td_loss_rho: 0.5
+  td_use_dyn_consistency_loss: False
+  use_rep_loss_with_td: False
+  td_context_is_head_inputs: False
+  apply_rho_to_expl_loss: False
+
+  disable_wm_train_loss: False
+  normal_wm_loss_for_residual_only: False
+
+  rssm_stoch_only_larger_mlp_prior: False
+  rssm_stoch_only_larger_mlp_prior_with_prior_belief: False
+  rssm_stoch_only_larger_mlp_prior_with_post_belief: False
+
+  # end alternate architectures
+  use_heads_from_vanilla_dreamer: True
+  supervise_grounded_state: False
+  use_sim_forward_dynamics: False
+  grounded_heads_include_is_valid: False
+  allow_predicting_unusable_grounded_states: False
+  optimize_encoder_in_train_alt: False
+  encoder_outputs_grounded_symlog: False
+  encoder_is_identity_function: False
+  optimize_sup_grounded_loss_in_train_alt: False
+  optimize_sim_tf_with_world_model_in_train: False
+  also_apply_head_losses_from_priors: False
+  perform_train_on_all_data_sources: False
+  train_rep_on_residual: False
+
+  sim_query_data_same_in_format_as_normal_experience: False
+  pred_state_data_uses_gt_state: False
+
+  optimize_rssm_in_train_alt: False
+
+  normalize_agent_grounded_input: False
+  normalize_all_grounded_states: False
+  normalize_image_complement: False
+
+  apply_image_augmentations: ''
+  augment_image_workers: 16
+  reverse_actions_added_to_replay: False
+  save_framestacked_image_as_image: False
+
+  train_grounded_nets_on_experience: True
+  grounded_nets_experience_replay_directory_override: ''
+
+  train_grounded_nets_on_world_model_train_pred_states: True
+  train_grounded_nets_on_imagined_rollout_pred_states: True
+  sim_query_task: ''
+  submit_every_nth_pred_state_batch_as_training_data: 8
+  num_simulator_query_workers: 10
+  secondary_replay_capacity: 30000
+
+  reset_initial_states_from_buffer_directory: ''
+  reset_initial_states_replay_capacity: 1e9
+
+  sim_tf: { layers: 5, units: 1024, act: silu, norm: layer, dist: mse, winit: normal, fan: avg }
+
+  # Actor Critic
+  actor: { layers: 5, units: 1024, act: silu, norm: layer, minstd: 0.1, maxstd: 1.0, outscale: 1.0, outnorm: False, unimix: 0.01, inputs: [ deter, stoch ], winit: normal, fan: avg, symlog_inputs: False }
+  critic: { layers: 5, units: 1024, act: silu, norm: layer, dist: symlog_disc, outscale: 0.0, outnorm: False, inputs: [ deter, stoch ], winit: normal, fan: avg, bins: 255, symlog_inputs: False }
+  actor_opt: { opt: adam, lr: 3e-5, eps: 1e-5, clip: 100.0, wd: 0.0, warmup: 0, lateclip: 0.0 }
+  critic_opt: { opt: adam, lr: 3e-5, eps: 1e-5, clip: 100.0, wd: 0.0, warmup: 0, lateclip: 0.0 }
+  actor_dist_disc: onehot
+  actor_dist_cont: normal
+  actor_grad_disc: reinforce
+  actor_grad_cont: backprop
+  critic_type: vfunction
+  imag_horizon: 15
+  imag_unroll: False
+  horizon: 333
+  return_lambda: 0.95
+  critic_slowreg: logprob
+  slow_critic_update: 1
+  slow_critic_fraction: 0.02
+  retnorm: { impl: perc_ema, decay: 0.99, max: 1.0, perclo: 5.0, perchi: 95.0 }
+  actent: 3e-4
+
+  # Exploration
+  expl_rewards: { extr: 1.0, disag: 0.1 }
+  expl_opt: { opt: adam, lr: 1e-4, eps: 1e-5, clip: 100.0, wd: 0.0, warmup: 0 }
+  disag_head: { layers: 5, units: 1024, act: silu, norm: layer, dist: mse, outscale: 1.0, inputs: [ deter, stoch, action ], winit: normal, fan: avg }
+  disag_loss_scale: 1.0
+  disag_target: [ stoch ]
+  disag_models: 8
+
+metaworld:
+  
+  task: metaworld_task_name
+  seed: 0
+  envs.amount: 1
+  expl_rewards: { extr: 1.0, disag: 0.1 }
+  grad_heads: [ "decoder" ]  # world model
+  run:
+    script: train_eval
+    steps: 2e6
+    eval_every: 1e4
+    expl_until: 2e6
+    log_every: 500
+  # time limit
+  wrapper.length: 500
+  wrapper.reset: True
+
+metaworldsim_vision:
+
+  task: metaworld_door-close-v2  # metaworld_box-close-v2
+  run.train_ratio: 512
+  run:
+    steps: 25000
+    eval_every: 1e4
+    eval_eps: 100
+    eval_initial: True
+    log_every: 1600
+  envs.amount: 1
+  # below defines architecture of small size.
+  rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: {mlp_keys: 'image_complement', cnn_keys: 'image'}
+  decoder: {mlp_keys: 'image_complement', cnn_keys: 'image'}
+
+  wrapper.length: 500
+  wrapper.reset: True
+
+minecraft:
+
+  task: minecraft_diamond
+  envs.amount: 16
+  run:
+    script: train_save
+    eval_fill: 1e5
+    train_ratio: 16
+    log_keys_max: '^log_inventory.*'
+  encoder: { mlp_keys: 'inventory|inventory_max|equipped|health|hunger|breath|reward', cnn_keys: 'image' }
+  decoder: { mlp_keys: 'inventory|inventory_max|equipped|health|hunger|breath', cnn_keys: 'image' }
+
+dmlab:
+
+  task: dmlab_explore_goal_locations_small
+  envs.amount: 8
+  encoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  decoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  run.train_ratio: 64
+
+atari:
+
+  task: atari_pong
+  envs.amount: 8
+  run:
+    steps: 5.5e7
+    eval_eps: 10
+    train_ratio: 64
+  encoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  decoder: { mlp_keys: '$^', cnn_keys: 'image' }
+
+atari100k:
+
+  task: atari_pong
+  envs: { amount: 1 }
+  env.atari: { gray: False, repeat: 4, sticky: False, noops: 30, actions: needed }
+  run:
+    script: train_eval
+    steps: 1.5e5
+    eval_every: 1e5
+    eval_initial: False
+    eval_eps: 100
+    train_ratio: 1024
+  jax.precision: float32
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  actor_eval_sample: True
+  encoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  decoder: { mlp_keys: '$^', cnn_keys: 'image' }
+
+crafter:
+
+  task: crafter_reward
+  envs.amount: 1
+  run:
+    log_keys_max: '^log_achievement_.*'
+    log_keys_sum: '^log_reward$'
+  run.train_ratio: 512
+  encoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  decoder: { mlp_keys: '$^', cnn_keys: 'image' }
+
+dmc_vision:
+
+  task: dmc_walker_walk
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  decoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  grounded_decoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  run:
+    eval_every: 2e4
+    eval_eps: 100
+    log_every: 1600
+
+dmcsim_vision:
+  task: dmcsim_cheetah_run
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: 'image_complement', cnn_keys: 'image' }
+  decoder: { mlp_keys: 'image_complement', cnn_keys: 'image' }
+  grounded_decoder: { mlp_keys: 'image_complement', cnn_keys: 'image' }
+  run:
+    eval_every: 2e4
+    eval_eps: 100
+    log_every: 1600
+
+dmcsim_vision_unstacked:
+  task: dmcsim_cheetah_run
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: 'image_complement', cnn_keys: 'image' }
+  decoder: { mlp_keys: 'image_complement', cnn_keys: 'image' }
+  grounded_decoder: { mlp_keys: 'image_complement', cnn_keys: 'image' }
+  env.dmcsim: { repeat: 1 }
+  wrapper: { framestack_image: 2, framestack_only_image: True, return_as_framestacked_image: True, repeat_after_framestack: 2, sum_rewards_between_action_repeat: False }
+  save_framestacked_image_as_image: True
+  run:
+    eval_every: 2e4
+    eval_eps: 100
+    log_every: 1600
+
+
+dmcsim_vision_framestack:
+  task: dmcsim_cheetah_run
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  decoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  grounded_decoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  wrapper: { framestack_image: 2 }
+  run:
+    eval_every: 2e4
+    eval_eps: 100
+    log_every: 1600
+
+dmcsim_vision_framestack_immediate_decode_image_complement:
+  task: dmcsim_cheetah_run
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: '$^', cnn_keys: 'framestacked_image' }
+  decoder: { mlp_keys: 'image_complement', cnn_keys: 'image' }
+  grounded_decoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  env.dmcsim: { repeat: 1 }
+  wrapper: { framestack_image: 2, framestack_only_image: True, return_as_framestacked_image: True, repeat_after_framestack: 2, sum_rewards_between_action_repeat: False}
+  run:
+    eval_every: 2e4
+    eval_eps: 100
+    log_every: 1600
+
+dmcsim_vision_framestack_immediate:
+  task: dmcsim_cheetah_run
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  decoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  grounded_decoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  env.dmcsim: { repeat: 1 }
+  wrapper: { framestack_image: 2, framestack_only_image: True, repeat_after_framestack: 2, sum_rewards_between_action_repeat: False}
+  run:
+    eval_every: 2e4
+    eval_eps: 100
+    log_every: 1600
+
+dmcsim_vision_and_ctrl:
+  task: dmcsim_cheetah_run
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: ['image_complement', 'control'], cnn_keys: 'image' }
+  decoder: { mlp_keys: ['image_complement', 'control'], cnn_keys: 'image' }
+  grounded_decoder: { mlp_keys: ['image_complement', 'control'], cnn_keys: 'image' }
+  run:
+    eval_every: 2e4
+    eval_eps: 100
+    log_every: 1600
+
+dmcsim_vision_framestack_and_ctrl:
+  task: dmcsim_cheetah_run
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: ['image_complement', 'control'], cnn_keys: 'image' }
+  decoder: { mlp_keys: ['image_complement', 'control'], cnn_keys: 'image' }
+  grounded_decoder: { mlp_keys: ['image_complement', 'control'], cnn_keys: 'image' }
+  run:
+    eval_every: 2e4
+    eval_eps: 100
+    log_every: 1600
+  wrapper: { framestack_image: 2 }
+  env:
+    dmcsim: {repeat: 1}
+
+dmcsim_vision_framestack_and_ctrl_only:
+  task: dmcsim_cheetah_run
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: 'control', cnn_keys: 'image' }
+  decoder: { mlp_keys: 'control', cnn_keys: 'image' }
+  grounded_decoder: { mlp_keys: 'control', cnn_keys: 'image' }
+  run:
+    eval_every: 2e4
+    eval_eps: 100
+    log_every: 1600
+  wrapper: { framestack_image: 2 }
+  env:
+    dmcsim: {repeat: 1}
+
+dmcsim_vision_decode_proprio:
+  task: dmcsim_cheetah_run
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: 'image_complement', cnn_keys: 'image' }
+  decoder: { mlp_keys: '(?!image_complement)', cnn_keys: '$^' }
+  grounded_decoder: { mlp_keys: '(?!image_complement)', cnn_keys: '$^' }
+  run:
+    eval_every: 2e4
+    eval_eps: 100
+    log_every: 1600
+
+
+dmcsim_proprio:
+
+  task: dmcsim_walker_walk
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: '(?!image_complement)', cnn_keys: '$^' }
+  decoder: { mlp_keys: '(?!image_complement)', cnn_keys: '$^' }
+  grounded_decoder: { mlp_keys: '(?!image_complement)', cnn_keys: '$^' }
+  run:
+    log_every: 1000
+  # time limit
+#  wrapper.length: 500
+#  wrapper.reset: True
+
+dmcsim_proprio_with_image_complement:
+
+  task: dmcsim_cheetah_run
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: '.*', cnn_keys: '$^' }
+  decoder: { mlp_keys: '.*', cnn_keys: '$^' }
+  grounded_decoder: { mlp_keys: '.*', cnn_keys: '$^' }
+  run:
+    log_every: 1000
+    eval_every: 2e4
+    eval_eps: 100
+
+dmcmjxsim_proprio:
+
+  task: dmcmjxsim_cheetah_run
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: '(?!image_complement)', cnn_keys: '$^' }
+  decoder: { mlp_keys: '(?!image_complement)', cnn_keys: '$^' }
+  grounded_decoder: { mlp_keys: '(?!image_complement)', cnn_keys: '$^' }
+  run:
+    log_every: 1000
+
+dmc_proprio:
+
+  task: dmc_walker_walk
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: '.*', cnn_keys: '$^' }
+  decoder: { mlp_keys: '.*', cnn_keys: '$^' }
+
+bsuite:
+
+  task: bsuite_mnist/0
+  envs: { amount: 1, parallel: none }
+  run:
+    script: train
+    train_ratio: 1024  # 128 for cartpole
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+
+loconav:
+
+  task: loconav_ant_maze_m
+  env.loconav.repeat: 2
+  run:
+    train_ratio: 512
+    log_keys_max: '^log_.*'
+  encoder: { mlp_keys: '.*', cnn_keys: 'image' }
+  decoder: { mlp_keys: '.*', cnn_keys: 'image' }
+
+small:
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.units: 512
+  .*\.layers: 2
+
+medium:
+  rssm.deter: 1024
+  grounded_rssm.deter: 1024
+  .*\.cnn_depth: 48
+  .*\.units: 640
+  .*\.layers: 3
+
+large:
+  rssm.deter: 2048
+  grounded_rssm.deter: 2048
+  .*\.cnn_depth: 64
+  .*\.units: 768
+  .*\.layers: 4
+
+xlarge:
+  rssm.deter: 4096
+  grounded_rssm.deter: 4096
+  .*\.cnn_depth: 96
+  .*\.units: 1024
+  .*\.layers: 5
+
+medium_encoders:
+  encoder: { cnn_depth: 48, mlp_units: 640, mlp_layers: 3}
+  decoder: { cnn_depth: 48, mlp_units: 640, mlp_layers: 3}
+
+cnn_depth_64:
+  encoder: { cnn_depth: 64}
+  decoder: { cnn_depth: 64}
+
+2_block_cnn_depth_32:
+  encoder: { cnn_depth: 32, cnn_blocks: 2 }
+  decoder: { cnn_depth: 32, cnn_blocks: 2 }
+
+multicpu:
+
+  jax:
+    logical_cpus: 8
+    policy_devices: [ 0, 1 ]
+    train_devices: [ 2, 3, 4, 5, 6, 7 ]
+  run:
+    actor_batch: 4
+  envs:
+    amount: 8
+  batch_size: 12
+  batch_length: 10
+
+debug:
+
+  jax: { jit: True, prealloc: False, debug: True, platform: cpu }
+  envs: { restart: False, amount: 3 }
+  wrapper: { length: 100, checks: True }
+  run:
+    eval_every: 1000
+    log_every: 5
+    save_every: 10
+    train_ratio: 32
+    actor_batch: 2
+  batch_size: 8
+  batch_length: 12
+  replay_size: 1e5
+  encoder.cnn_depth: 8
+  decoder.cnn_depth: 8
+  rssm: { deter: 32, units: 16, stoch: 4, classes: 4 }
+  .*unroll: False
+  .*\.layers: 2
+  .*\.units: 16
+  .*\.wd$: 0.0
+
+gridworld:
+  task: gridworld_FourRoomsSmallLayoutSingleGoalGridWorldEnvPO
+  run.train_ratio: 1024
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  decoder: { mlp_keys: '$^', cnn_keys: 'image', }
+  run:
+    log_every: 100
+
+sup_grounded:
+  use_grounded_rssm: True
+  use_heads_from_vanilla_dreamer: False
+  supervise_grounded_state: True
+  train_grounded_nets_on_experience: True
+  train_grounded_nets_on_world_model_train_pred_states: True
+  train_grounded_nets_on_imagined_rollout_pred_states: True
+
+sup_grounded_with_grads:
+  use_grounded_rssm: True
+  use_heads_from_vanilla_dreamer: False
+  grad_heads: [ grounded_decoder, grounded_reward, grounded_cont ]
+  supervise_grounded_state: True
+  train_grounded_nets_on_experience: True
+  train_grounded_nets_on_world_model_train_pred_states: True
+  train_grounded_nets_on_imagined_rollout_pred_states: True
+
+unsup_grounded:
+  use_grounded_rssm: True
+  use_heads_from_vanilla_dreamer: False
+  grad_heads: [ grounded_decoder, grounded_reward, grounded_cont ]
+  supervise_grounded_state: False
+  train_grounded_nets_on_experience: True
+  train_grounded_nets_on_world_model_train_pred_states: True
+  train_grounded_nets_on_imagined_rollout_pred_states: True
+
+with_sim_tf:
+  use_sim_forward_dynamics: True
+  train_grounded_nets_on_experience: True
+  train_grounded_nets_on_world_model_train_pred_states: True
+  train_grounded_nets_on_imagined_rollout_pred_states: True
+  grounded_rssm: { gradients_through_sim_tf: False }
+
+with_is_valid_head:
+  grounded_heads_include_is_valid: True
+
+allow_unusable_states:
+  allow_predicting_unusable_grounded_states: True
+
+dont_train_bb_on_exp:
+  train_grounded_nets_on_experience: False
+
+dont_train_bb_on_pred:
+  train_grounded_nets_on_world_model_train_pred_states: False
+  train_grounded_nets_on_imagined_rollout_pred_states: False
+
+dont_train_bb_on_pred_rollouts:
+  train_grounded_nets_on_imagined_rollout_pred_states: False
+
+dont_train_bb_on_pred_posteriors:
+  train_grounded_nets_on_world_model_train_pred_states: False
+
+
+train_bb_on_pred_rollouts:
+  train_grounded_nets_on_imagined_rollout_pred_states: True
+
+keep_heads:
+  use_heads_from_vanilla_dreamer: True
+
+sim_tf_grads:
+  grounded_rssm: { gradients_through_sim_tf: True }
+
+save_replay:
+  save_replay: True
+
+save_eval_replay:
+  save_eval_replay: True
+
+freq_logs:
+  run:
+    log_every: 1
+
+pred_state_data_uses_gt_state:
+  pred_state_data_uses_gt_state: True
+
+
+plan2explore:
+  expl_behavior: Explore
+  expl_rewards: { extr: 0.0, disag: 1.0 }
+  run:
+    script: train_eval
+    eval_every: 5e4
+    eval_eps: 100
+
+disag_0p01:
+  expl_rewards: { disag: 0.01 }
+
+disag_0p1:
+  expl_rewards: { disag: 0.1 }
+
+disag_10:
+  expl_rewards: { disag: 10.0 }
+
+disag_100:
+  expl_rewards: { disag: 100.0 }
+
+disag_1000:
+  expl_rewards: { disag: 1000.0 }
+
+disag_10000:
+  expl_rewards: { disag: 10000.0 }
+
+disag_loss_scale_10:
+  disag_loss_scale: 10.0
+
+disag_loss_scale_100:
+  disag_loss_scale: 100.0
+
+disag_head_2_layers:
+  disag_head: { layers: 2}
+
+disag_head_4_layers:
+  disag_head: { layers: 4}
+
+plan2explore_target_is_probs:
+  disag_target: [ probs ]
+
+plan2explore_target_is_embed:
+  disag_target: [ embed ]
+
+p2e_tgt_embed:
+  disag_target: [ embed ]
+
+plan2explore_target_is_logit:
+  disag_target: [ logit ]
+
+plan2explore_target_is_stoch:
+  disag_target: [ stoch ]
+
+#expl_opt_0p1_lr:
+#  expl_opt: { lr: 1e-3}
+
+expl_opt_5x_lr:
+  expl_opt: { lr: 5e-4}
+
+expl_opt_10x_lr:
+  expl_opt: { lr: 1e-3}
+
+expl_opt_50x_lr:
+  expl_opt: { lr: 5e-3}
+
+#expl_opt_0p5x_lr:
+#  expl_opt: { lr: 2e-5}
+
+mixed_plan2explore:
+  expl_behavior: Explore
+  expl_rewards: { extr: 1.0, disag: 0.01 }
+  run:
+    script: train_eval
+    eval_every: 5e4
+    eval_eps: 100
+
+p2e_some_task_signal:
+  expl_rewards: { extr: 0.1, disag: 1.0 }
+
+p2e_mostly_task_signal:
+  expl_rewards: { extr: 1.0, disag: 0.1 }
+
+p2e_evenly_task_and_disag:
+  expl_rewards: { extr: 1.0, disag: 1.0 }
+
+p2e_half_task_signal:
+  expl_rewards: { extr: 0.5, disag: 1.0 }
+
+replay_size_100:
+  replay_size: 100
+
+replay_size_250:
+  replay_size: 250
+
+replay_size_500:
+  replay_size: 500
+
+replay_size_1024:
+  replay_size: 1024
+
+replay_size_1500:
+  replay_size: 1500
+
+replay_size_3e3:
+  replay_size: 3e3
+
+replay_size_6e3:
+  replay_size: 6e3
+
+replay_size_1e4:
+  replay_size: 1e4
+
+replay_size_2e4:
+  replay_size: 2e4
+
+replay_size_4e4:
+  replay_size: 4e4
+
+replay_size_8e4:
+  replay_size: 8e4
+
+replay_size_1e5:
+  replay_size: 1e5
+
+replay_size_1e6:
+  replay_size: 1e6
+
+replay_size_1e7:
+  replay_size: 1e7
+
+rs1e7:
+  replay_size: 1e7
+
+reset_states_size_4e4:
+  reset_initial_states_replay_capacity: 4e4
+
+freeze_encoder:
+  freeze_encoder: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/wm/model_opt/ ]
+
+freeze_posterior:
+  freeze_posterior: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/wm/model_opt/ ]
+
+freeze_vanilla_heads:
+  freeze_vanilla_heads: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+freeze_grounded_heads:
+  freeze_grounded_heads: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+freeze_sim_tf:
+  freeze_sim_tf: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+omit_gt_state:
+  # mainly serves as a sanity check to make sure gt_state isn't used with the target non-privileged env
+  env:
+    dmcsim:  { omit_gt_state: True }
+  omit_gt_state_from_replays_where_optional: True
+
+
+train_ratio_256:
+  run:
+    train_ratio: 256
+
+train_ratio_1024:
+  run:
+    train_ratio: 1024
+
+train_ratio_2048:
+  run:
+    train_ratio: 2048
+
+agent_obs_z_only:
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+
+agent_obs_h_z_s:
+  actor:  { inputs: [ deter, stoch, symlog_grounded ]}
+  critic: { inputs: [ deter, stoch, symlog_grounded ]}
+
+agent_obs_h_s:
+  actor:  { inputs: [ deter, symlog_grounded ]}
+  critic: { inputs: [ deter, symlog_grounded ]}
+
+agent_obs_s_only:
+  actor:  { inputs: [ symlog_grounded ]}
+  critic: { inputs: [ symlog_grounded ]}
+
+agent_obs_h_zstats:
+  actor:  { inputs: [ deter, logit ]}
+  critic: { inputs: [ deter, logit ]}
+
+duckiebots:
+  task: duckiebotssim_lanefollowing
+  envs: { amount: 1, parallel: none}
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: 'yaw_and_forward_vel', cnn_keys: 'image' }
+  decoder: { mlp_keys: 'yaw_and_forward_vel', cnn_keys: 'image' }
+  run:
+    eval_every: 5e4
+    eval_eps: 100
+    log_every: 3000
+
+duckiebots_vision_only:
+  task: duckiebotssim_lanefollowing
+  envs: { amount: 1, parallel: none }
+  run.train_ratio: 512
+  rssm.deter: 512
+  grounded_rssm.deter: 512
+  .*\.cnn_depth: 32
+  .*\.layers: 2
+  .*\.units: 512
+  encoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  decoder: { mlp_keys: '$^', cnn_keys: 'image' }
+  run:
+    eval_every: 5e4
+    eval_eps: 100
+    log_every: 3000
+
+duckiebots_vector_obs_only:
+  encoder: { mlp_keys: '.*', cnn_keys: '$^' }
+  decoder: { mlp_keys: '.*', cnn_keys: '$^' }
+
+stronger_dr:
+  # stronger domain randomization for duckiebots
+  env:
+    duckiebotssim: {randomize_camera_location_for_tilted_robot: True}
+
+no_mask:
+  env:
+    duckiebotssim: { use_mask: False }
+    duckiebotsreal: { use_mask: False }
+
+no_mask_duckiebots:
+  env:
+    duckiebotssim: { use_mask: False }
+    duckiebotsreal: { use_mask: False }
+
+30_hz:
+  env:
+    duckiebotssim: {physics_hz: 30.0}
+
+duckiebots_physics_30_hz:
+  env:
+    duckiebotssim: {physics_hz: 30.0}
+
+duckiebots_physics_15_hz:
+  env:
+    duckiebotssim: {physics_hz: 15.0}
+
+duckiebots_physics_10_hz:
+  env:
+    duckiebotssim: {physics_hz: 10.0}
+
+duckiebots_physics_5_hz:
+  env:
+    duckiebotssim: {physics_hz: 5.0}
+
+duckiebots_physics_20_hz:
+  env:
+    duckiebotssim: {physics_hz: 20.0}
+
+simple_physics:
+  env:
+    duckiebotssim: { use_simple_physics: True }
+
+wheel_bias:
+  env:
+    duckiebotssim: { use_wheel_bias: True }
+
+limit_backwards:
+  env:
+    duckiebotssim: { limit_backwards: True }
+
+duckiebots_use_simple_physics:
+  env:
+    duckiebotssim: {use_simple_physics: True}
+
+duckiebots_time_limit_500:
+  env:
+    duckiebotssim: {time_limit: 500}
+
+sim_query_res2:
+  submit_every_nth_pred_state_batch_as_training_data: 64
+  num_simulator_query_workers: 12
+  secondary_replay_capacity: 500000
+
+
+correct_size_sim_tf:
+  sim_tf: { layers: 5, units: 1024, act: silu, norm: layer, dist: mse, winit: normal, fan: avg }
+
+larger_sim_tf:
+  sim_tf: { layers: 7 }
+
+smaller_sim_tf:
+  sim_tf: { layers: 3 }
+
+
+rssm_units_deter_256:
+  rssm.deter: 256
+  rssm.units: 256
+  grounded_rssm.deter: 256
+  grounded_rssm.units: 256
+
+rssm_units_1024:
+  rssm.units: 1024
+  grounded_rssm.units: 1024
+
+non_recurrent:
+  grounded_rssm_is_non_recurrent: True
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+
+non_recurrent2:
+  grounded_rssm_is_non_recurrent2: True
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+
+non_recurrent2_agent_sees_s:
+  grounded_rssm_is_non_recurrent2: True
+  actor: { inputs: [ stoch, deter_symlog_grounded ] }
+  critic: { inputs: [ stoch, deter_symlog_grounded ] }
+  disag_head: { inputs: [ stoch, symlog_grounded, action ] }
+
+
+non_recurrent3:
+  grounded_rssm_is_non_recurrent3: True
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+
+non_recurrent3_agent_sees_s:
+  grounded_rssm_is_non_recurrent3: True
+  actor: { inputs: [ stoch, symlog_grounded ] }
+  critic: { inputs: [ stoch, symlog_grounded ] }
+  disag_head: { inputs: [ stoch, symlog_grounded, action ] }
+
+non_recurrent3_agent_sees_only_s:
+  grounded_rssm_is_non_recurrent3: True
+  actor: { inputs: [ symlog_grounded ] }
+  critic: { inputs: [ symlog_grounded ] }
+  disag_head: { inputs: [ symlog_grounded, action ] }
+
+
+pred_replay_2e6:
+  secondary_replay_capacity: 2e6
+
+pred_replay_5e6:
+  secondary_replay_capacity: 5e6
+
+pred_2e6_every_256_batches:
+  secondary_replay_capacity: 2e6
+  submit_every_nth_pred_state_batch_as_training_data: 256
+
+
+
+non_recurrent4_agent_sees_s:
+  grounded_rssm_is_non_recurrent4: True
+  optimize_encoder_in_train_alt: True
+  encoder_outputs_grounded_symlog: True
+  optimize_sup_grounded_loss_in_train_alt: True
+
+  use_grounded_rssm: True
+  use_heads_from_vanilla_dreamer: False
+  grad_heads: [ grounded_decoder, grounded_reward, grounded_cont ]
+  supervise_grounded_state: True
+
+  actor: { inputs: [ stoch, symlog_grounded_deter ] }
+  critic: { inputs: [ stoch, symlog_grounded_deter ] }
+  disag_head: { inputs: [ stoch, symlog_grounded_deter, action ] }
+
+
+non_recurrent4_agent_sees_s_deter:
+  grounded_rssm: {img_is_deterministic: True}
+
+  grounded_rssm_is_non_recurrent4: True
+  optimize_encoder_in_train_alt: True
+  encoder_outputs_grounded_symlog: True
+  optimize_sup_grounded_loss_in_train_alt: True
+
+  use_grounded_rssm: True
+  use_heads_from_vanilla_dreamer: False
+  grad_heads: [ grounded_decoder, grounded_reward, grounded_cont ]
+  supervise_grounded_state: True
+
+  actor: { inputs: [ stoch, symlog_grounded_deter ] }
+  critic: { inputs: [ stoch, symlog_grounded_deter ] }
+  disag_head: { inputs: [ stoch, symlog_grounded_deter, action ] }
+
+#non_recurrent4_agent_sees_s_deter:
+#  grounded_rssm_is_non_recurrent4: True
+#  actor: { inputs: [ stoch, symlog_grounded_deter ] }
+#  critic: { inputs: [ stoch, symlog_grounded_deter ] }
+#  disag_head: { inputs: [ stoch, symlog_grounded_deter, action ] }
+#  grounded_rssm: {img_is_deterministic: True}
+
+#
+#
+#non_recurrent4:
+#  grounded_rssm_is_non_recurrent4: True
+#  actor: { inputs: [ stoch ] }
+#  critic: { inputs: [ stoch ] }
+#  disag_head: { inputs: [ stoch, action ] }
+##  grounded_rssm: {img_is_deterministic: True}
+#
+#non_recurrent4_agent_sees_s:
+#  grounded_rssm_is_non_recurrent4: True
+#  actor: { inputs: [ stoch, symlog_grounded_deter ] }
+#  critic: { inputs: [ stoch, symlog_grounded_deter ] }
+#  disag_head: { inputs: [ stoch, symlog_grounded_deter, action ] }
+##  grounded_rssm: {img_is_deterministic: True}
+#
+#non_recurrent4_agent_sees_only_s:
+#  grounded_rssm_is_non_recurrent4: True
+#  actor: { inputs: [ symlog_grounded_deter ] }
+#  critic: { inputs: [ symlog_grounded_deter ] }
+#  disag_head: { inputs: [ symlog_grounded_deter, action ] }
+##  grounded_rssm: {img_is_deterministic: True}
+
+
+
+
+no_dyn_loss:
+  dyn_loss: { impl: none }
+
+no_rep_loss:
+  rep_loss: { impl: none }
+
+no_dyn_or_rep_loss:
+  dyn_loss: { impl: none }
+  rep_loss: { impl: none }
+
+no_dyn_loss_rep_has_uniform_prior:
+  dyn_loss: { impl: none }
+  rep_loss: { impl: uniform }
+
+literal_wm:
+  grounded_rssm_is_literal: True
+  actor: { inputs: [ symlog_grounded ] }
+  critic: { inputs: [ symlog_grounded ] }
+  disag_head: { inputs: [ symlog_grounded, action ] }
+  dyn_loss: { impl: mse, free: 1.0 }
+  rep_loss: { impl: none, free: 1.0 }
+
+sim_only_wm:
+
+  grounded_rssm_is_sim_only: True
+  optimize_encoder_in_train_alt: True
+  encoder_outputs_grounded_symlog: True
+  optimize_sup_grounded_loss_in_train_alt: True
+
+  use_grounded_rssm: True
+  use_heads_from_vanilla_dreamer: False
+  supervise_grounded_state: True
+
+  actor: { inputs: [ symlog_grounded ] }
+  critic: { inputs: [ symlog_grounded ] }
+  disag_head: { inputs: [ symlog_grounded, action ] }
+  dyn_loss: { impl: none, free: 1.0 }
+  rep_loss: { impl: none, free: 1.0 }
+  sim_tf: { layers: 5, units: 1024, act: silu, norm: layer, dist: mse, winit: normal, fan: avg }
+
+  batch_size: 16
+  batch_length: 3
+
+sim_only_wm_unsup:
+
+  grounded_rssm_is_sim_only: True
+  encoder_outputs_grounded_symlog: True
+  optimize_encoder_in_train_alt: False
+  optimize_sup_grounded_loss_in_train_alt: False
+  grad_heads: [ grounded_decoder, grounded_reward, grounded_cont ]
+
+  #  optimize_sim_tf_with_world_model_in_train: True
+#  also_apply_head_losses_from_priors: True
+
+  use_grounded_rssm: True
+  use_heads_from_vanilla_dreamer: False
+  supervise_grounded_state: False
+
+  actor: { inputs: [ symlog_grounded ] }
+  critic: { inputs: [ symlog_grounded ] }
+  disag_head: { inputs: [ symlog_grounded, action ] }
+  dyn_loss: { impl: none, free: 1.0 }
+  rep_loss: { impl: none, free: 1.0 }
+  sim_tf: { layers: 5, units: 1024, act: silu, norm: layer, dist: mse, winit: normal, fan: avg }
+
+  batch_size: 16
+  batch_length: 3
+
+sim_only_wm_multicpu:
+
+  jax:
+    logical_cpus: 64
+    policy_devices: [ 3 ]
+    train_devices: [ 0, 1, 2]
+  batch_size: 12
+
+
+gt_sim_only_wm_unsup:
+  actor_grad_cont: reinforce
+
+  optimize_sim_tf_with_world_model_in_train: False
+  supervise_grounded_state: False
+  grad_heads: [ grounded_decoder, grounded_reward, grounded_cont ]
+  optimize_sup_grounded_loss_in_train_alt: False
+  optimize_encoder_in_train_alt: False
+  also_apply_head_losses_from_priors: False
+
+  grounded_rssm_is_gt_sim_only: True
+  encoder_outputs_grounded_symlog: True
+
+  use_grounded_rssm: True
+  use_heads_from_vanilla_dreamer: False
+
+  actor: { inputs: [ symlog_grounded ] }
+  critic: { inputs: [ symlog_grounded ] }
+  disag_head: { inputs: [ symlog_grounded, action ] }
+  dyn_loss: { impl: none, free: 1.0 }
+  rep_loss: { impl: none, free: 1.0 }
+
+  train_grounded_nets_on_experience: True
+  train_grounded_nets_on_world_model_train_pred_states: True
+  train_grounded_nets_on_imagined_rollout_pred_states: False
+
+gt_sim_only_wm_sup:
+  actor_grad_cont: reinforce
+
+  optimize_sim_tf_with_world_model_in_train: False
+  supervise_grounded_state: True
+  optimize_sup_grounded_loss_in_train_alt: False
+  optimize_encoder_in_train_alt: False
+  also_apply_head_losses_from_priors: False
+
+  grounded_rssm_is_gt_sim_only: True
+  encoder_outputs_grounded_symlog: True
+
+  use_grounded_rssm: True
+  use_heads_from_vanilla_dreamer: False
+
+  actor: { inputs: [ symlog_grounded ] }
+  critic: { inputs: [ symlog_grounded ] }
+  disag_head: { inputs: [ symlog_grounded, action ] }
+  dyn_loss: { impl: none, free: 1.0 }
+  rep_loss: { impl: none, free: 1.0 }
+
+  train_grounded_nets_on_experience: True
+  train_grounded_nets_on_world_model_train_pred_states: True
+  train_grounded_nets_on_imagined_rollout_pred_states: False
+
+gt_sim_only_wm_sup_alt_train_method:
+  actor_grad_cont: reinforce
+
+  optimize_sim_tf_with_world_model_in_train: False
+  supervise_grounded_state: True
+  optimize_sup_grounded_loss_in_train_alt: True
+  optimize_encoder_in_train_alt: True
+  also_apply_head_losses_from_priors: False
+
+  grounded_rssm_is_gt_sim_only: True
+  encoder_outputs_grounded_symlog: True
+
+  use_grounded_rssm: True
+  use_heads_from_vanilla_dreamer: False
+
+  actor: { inputs: [ symlog_grounded ] }
+  critic: { inputs: [ symlog_grounded ] }
+  disag_head: { inputs: [ symlog_grounded, action ] }
+  dyn_loss: { impl: none, free: 1.0 }
+  rep_loss: { impl: none, free: 1.0 }
+
+  train_grounded_nets_on_experience: True
+  train_grounded_nets_on_world_model_train_pred_states: True
+  train_grounded_nets_on_imagined_rollout_pred_states: False
+
+  batch_size: 16
+  batch_length: 3
+
+replace_h_with_s:
+  grounded_rssm_replaces_h_with_s: True
+  actor: { inputs: [ stoch, deter_symlog_grounded ] }
+  critic: { inputs: [ stoch, deter_symlog_grounded ] }
+  disag_head: { inputs: [ stoch, symlog_grounded, action ] }
+
+replace_h_with_s_more_features:
+  grounded_rssm_replaces_h_with_s_more_features: True
+  actor: { inputs: [ stoch, deter_symlog_grounded ] }
+  critic: { inputs: [ stoch, deter_symlog_grounded ] }
+  disag_head: { inputs: [ stoch, symlog_grounded, action ] }
+
+replace_gru:
+  grounded_rssm_replaces_gru: True
+
+replace_gru2:
+  grounded_rssm_replaces_gru2: True
+
+replace_gru2_more_layers_for_grounded:
+  grounded_rssm_replaces_gru2_more_layers_to_get_symlog_grounded: True
+
+replace_gru3_more_layers_for_grounded:
+  grounded_rssm_replaces_gru3_more_layers_to_get_symlog_grounded: True
+
+replace_gru3:
+  grounded_rssm_replaces_gru3: True
+
+query_every_64_batches:
+  submit_every_nth_pred_state_batch_as_training_data: 64
+
+query_every_128_batches:
+  submit_every_nth_pred_state_batch_as_training_data: 128
+
+query_every_256_batches:
+  submit_every_nth_pred_state_batch_as_training_data: 256
+
+query_every_1024_batches:
+  submit_every_nth_pred_state_batch_as_training_data: 1024
+
+large_sim_replay:
+  secondary_replay_capacity: 500000
+
+discrete_stoch_32_32:
+  rssm: { stoch: 32, classes: 32 }
+  grounded_rssm: { stoch: 32, classes: 32 }
+
+discrete_stoch_64_16:
+  rssm: { stoch: 64, classes: 16 }
+  grounded_rssm: { stoch: 64, classes: 16 }
+
+discrete_stoch_64_8:
+  rssm: { stoch: 64, classes: 8 }
+  grounded_rssm: { stoch: 64, classes: 8 }
+
+discrete_stoch_32_16:
+  rssm: { stoch: 32, classes: 16 }
+  grounded_rssm: { stoch: 32, classes: 16 }
+
+discrete_stoch_128_8:
+  rssm: { stoch: 128, classes: 8 }
+  grounded_rssm: { stoch: 128, classes: 8 }
+
+discrete_stoch_256_4:
+  rssm: { stoch: 256, classes: 4 }
+  grounded_rssm: { stoch: 256, classes: 4 }
+
+discrete_stoch_128_4:
+  rssm: { stoch: 128, classes: 4 }
+  grounded_rssm: { stoch: 128, classes: 4 }
+
+discrete_stoch_512_2:
+  rssm: { stoch: 512, classes: 2 }
+  grounded_rssm: { stoch: 512, classes: 2 }
+
+discrete_stoch_768_2:
+  rssm: { stoch: 768, classes: 2 }
+  grounded_rssm: { stoch: 768, classes: 2 }
+
+discrete_stoch_1024_2:
+  rssm: { stoch: 1024, classes: 2 }
+  grounded_rssm: { stoch: 1024, classes: 2 }
+
+discrete_stoch_64_32:
+  rssm: { stoch: 64, classes: 32 }
+  grounded_rssm: { stoch: 64, classes: 32 }
+
+discrete_stoch_128_32:
+  rssm: { stoch: 128, classes: 32 }
+  grounded_rssm: { stoch: 128, classes: 32 }
+
+discrete_stoch_32_8:
+  rssm: { stoch: 32, classes: 8 }
+  grounded_rssm: { stoch: 32, classes: 8 }
+
+discrete_stoch_16_32:
+  rssm: { stoch: 16, classes: 32 }
+  grounded_rssm: { stoch: 16, classes: 32 }
+
+larger_stoch:
+  rssm: { stoch: 64, classes: 64 }
+  grounded_rssm: { stoch: 64, classes: 64 }
+
+discrete_stoch_64_64:
+  rssm: { stoch: 64, classes: 64 }
+  grounded_rssm: { stoch: 64, classes: 64 }
+
+larger_stoch_x2:
+  rssm: { stoch: 128, classes: 64 }
+  grounded_rssm: { stoch: 128, classes: 64 }
+
+larger_stoch_x3:
+  rssm: { stoch: 192, classes: 64 }
+  grounded_rssm: { stoch: 192, classes: 64 }
+
+stoch_256_by_32:
+  rssm: { stoch: 256, classes: 32 }
+  grounded_rssm: { stoch: 256, classes: 32 }
+
+discrete_stoch_256_by_8:
+  rssm: { stoch: 256, classes: 8 }
+  grounded_rssm: { stoch: 256, classes: 8 }
+
+discrete_stoch_512_by_4:
+  rssm: { stoch: 512, classes: 4 }
+  grounded_rssm: { stoch: 512, classes: 4 }
+
+
+5x_wm_lr:
+  model_opt: { lr: 5e-4 }
+  bb_model_opt: { lr: 5e-4 }
+
+7x_wm_lr:
+  model_opt: { lr: 7e-4 }
+  bb_model_opt: { lr: 7e-4 }
+
+3x_wm_lr:
+  model_opt: { lr: 3e-4 }
+  bb_model_opt: { lr: 3e-4 }
+
+10x_wm_lr:
+  model_opt: { lr: 1e-3 }
+  bb_model_opt: { lr: 1e-3 }
+
+100x_wm_lr:
+  model_opt: { lr: 1e-2 }
+  bb_model_opt: { lr: 1e-2 }
+
+1000x_wm_lr:
+  model_opt: { lr: 1e-1 }
+  bb_model_opt: { lr: 1e-1 }
+
+faster_lr:
+  model_opt: { lr: 1e-3 }
+  bb_model_opt: { lr: 1e-3 }
+
+faster_bb_lr:
+  bb_model_opt: { lr: 1e-3 }
+
+slower_rssm_lr:
+  model_opt: { lr: 1e-5 }
+
+2x_learning_rate_for_all:
+  model_opt: { lr: 2e-4 }
+  bb_model_opt: { lr: 2e-4 }
+  actor_opt: { lr: 6e-5 }
+  critic_opt: { lr: 6e-5 }
+
+half_learning_rate_for_all:
+  model_opt: { lr: 5e-5 }
+  bb_model_opt: { lr: 5e-5 }
+  actor_opt: { lr: 1.5e-5 }
+  critic_opt: { lr: 1.5e-5 }
+
+reinforce_cont_actor:
+  actor_grad_cont: reinforce
+
+backprop_cont_actor:
+  actor_grad_cont: backprop
+
+
+optimize_encoder_in_train_alt:
+  optimize_encoder_in_train_alt: True
+
+optimize_sim_tf_with_world_model:
+  optimize_sim_tf_with_world_model_in_train: True
+
+tiny_deter:
+  rssm.deter: 64
+  grounded_rssm.deter: 64
+
+sg_in_img:
+  grounded_rssm: { sg_in_img: True }
+
+
+encoder_is_identity_function:
+  encoder_outputs_grounded_symlog: False
+  encoder_is_identity_function: True
+  optimize_encoder_in_train_alt: False
+  freeze_encoder: True
+
+medium_agent:
+  actor: { layers: 3, units: 640}
+  critic: { layers: 3, units: 640}
+
+
+normalize_agent_grounded_input:
+  normalize_agent_grounded_input: True
+
+normalize_all_grounded_states:
+  normalize_all_grounded_states: True
+
+scale_up_internal_states:
+  env:
+    dmcmjxsim: { internal_state_scale: 10.0 }
+
+
+train_ratio_32:
+  run:
+    train_ratio: 32.0
+
+actent_3e-3:
+  actent: 3e-3
+
+actent_3e-2:
+  actent: 3e-2
+
+16_by_6_batch:
+  batch_size: 16
+  batch_length: 6
+
+16_by_64_batch:
+  batch_size: 16
+  batch_length: 64
+
+16_by_16_batch:
+  batch_size: 16
+  batch_length: 16
+
+16_by_32_batch:
+  batch_size: 16
+  batch_length: 32
+
+8_by_64_batch:
+  batch_size: 8
+  batch_length: 64
+
+32_by_64_batch:
+  batch_size: 32
+  batch_length: 64
+
+
+8_by_6_batch:
+  batch_size: 8
+  batch_length: 6
+
+64_by_6_batch:
+  batch_size: 64
+  batch_length: 6
+
+64_by_16_batch:
+  batch_size: 64
+  batch_length: 16
+
+32_by_32_batch:
+  batch_size: 32
+  batch_length: 32
+
+128_by_8_batch:
+  batch_size: 128
+  batch_length: 8
+
+16_by_3_batch:
+  batch_size: 16
+  batch_length: 3
+
+16_by_2_batch:
+  batch_size: 16
+  batch_length: 2
+
+512_by_1_batch:
+  batch_size: 512
+  batch_length: 1
+
+512_by_2_batch:
+  batch_size: 512
+  batch_length: 2
+
+128_by_2_batch:
+  batch_size: 128
+  batch_length: 2
+
+128_by_16_batch:
+  batch_size: 128
+  batch_length: 16
+
+256_by_2_batch:
+  batch_size: 256
+  batch_length: 2
+
+256_by_4_batch:
+  batch_size: 256
+  batch_length: 4
+
+512_by_4_batch:
+  batch_size: 512
+  batch_length: 4
+
+
+1024_by_2_batch:
+  batch_size: 1024
+  batch_length: 2
+
+2048_by_2_batch_train_ratio_2048:
+  batch_size: 2048
+  batch_length: 2
+  run: {train_ratio: 2048}
+
+batch_size_256:
+  batch_size: 256
+
+batch_size_64:
+  batch_size: 64
+
+grounded_rssm_s_from_z_only:
+  grounded_rssm_s_from_z_only: True
+
+grounded_rssm_s_from_z_only_orig_size_network:
+  grounded_rssm_s_from_z_only_orig_size_network: True
+
+grounded_rssm_larger_get_grounded:
+  grounded_rssm_larger_get_grounded: True
+
+grounded_rssm_s_from_z_non_sequential_posterior:
+  grounded_rssm_s_from_z_non_sequential_posterior: True
+
+grounded_rssm_s_from_z_non_sequential_posterior_no_action:
+  grounded_rssm_s_from_z_non_sequential_posterior_no_action: True
+
+grounded_rssm_s_from_z_non_sequential_posterior_mlp_prior:
+  grounded_rssm_s_from_z_non_sequential_posterior_mlp_prior: True
+
+grounded_rssm_s_from_z_non_sequential_posterior_mlp_prior_larger:
+  grounded_rssm_s_from_z_non_sequential_posterior_mlp_prior_larger: True
+
+grounded_rssm_s_from_z_non_sequential_posterior_post_produces_h:
+  grounded_rssm_s_from_z_non_sequential_posterior_post_produces_h: True
+
+grounded_rssm_s_from_z_non_sequential_posterior_post_produces_h2:
+  grounded_rssm_s_from_z_non_sequential_posterior_post_produces_h: True
+
+rssm_stoch_only_larger_mlp_prior:
+  rssm_stoch_only_larger_mlp_prior: True
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  decoder: {  inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+  rssm: { deter: 2 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+rssm_stoch_only_larger_mlp_prior_with_prior_belief:
+  rssm_stoch_only_larger_mlp_prior_with_prior_belief: True
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  decoder: {  inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+  rssm: { deter: 2 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+rssm_stoch_only_larger_mlp_prior_with_prior_belief_heads_see_probs:
+  rssm_stoch_only_larger_mlp_prior_with_prior_belief: True
+  actor: { inputs: [ stoch, prior_stoch_probs ] }
+  critic: { inputs: [ stoch, prior_stoch_probs ] }
+  decoder: {  inputs: [ stoch, prior_stoch_probs ] }
+  reward_head: { inputs: [ stoch, prior_stoch_probs ] }
+  cont_head: { inputs: [ stoch, prior_stoch_probs ] }
+  disag_head: { inputs: [ stoch, prior_stoch_probs, action ] }
+  rssm: { deter: 2 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+
+rssm_stoch_only_larger_mlp_prior_with_prior_belief_agent_see_probs:
+  rssm_stoch_only_larger_mlp_prior_with_prior_belief: True
+  actor: { inputs: [ stoch, prior_stoch_probs ] }
+  critic: { inputs: [ stoch, prior_stoch_probs ] }
+  decoder: {  inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+  rssm: { deter: 2 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+rssm_stoch_only_larger_mlp_prior_with_post_belief:
+  rssm_stoch_only_larger_mlp_prior_with_post_belief: True
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  decoder: {  inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+  rssm: { deter: 2 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+rssm_stoch_only_larger_mlp_prior_with_post_belief_agent_see_probs:
+  rssm_stoch_only_larger_mlp_prior_with_post_belief: True
+  actor: { inputs: [ stoch, stoch_probs ] }
+  critic: { inputs: [ stoch, stoch_probs ] }
+  decoder: {  inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, stoch_probs, action ] }
+  rssm: { deter: 2 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+
+
+grounded_rssm_stoch_only_larger_mlp_prior_with_prior_belief:
+  grounded_rssm_stoch_only_larger_mlp_prior_with_prior_belief: True
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  decoder: {  inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 64, use_posterior_stoch_params_for_first_state: True} # deter isnt used, but we keep it around since some shapes are defined wrt deter
+  grounded_rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 64, use_posterior_stoch_params_for_first_state: True } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+  #masked kl loss
+  dyn_loss: { impl: kl_masked }
+  rep_loss: { impl: kl_masked }
+  loss_scales: { dyn: 1.0 }
+  batch_size: 16
+  batch_length: 2
+
+  use_grounded_rssm: True
+  use_heads_from_vanilla_dreamer: False
+  grad_heads: [ grounded_decoder, grounded_reward, grounded_cont ]
+  supervise_grounded_state: False
+  train_grounded_nets_on_experience: True
+  train_grounded_nets_on_world_model_train_pred_states: True
+  train_grounded_nets_on_imagined_rollout_pred_states: True
+
+  sim_query_data_same_in_format_as_normal_experience: True
+  optimize_rssm_in_train_alt: False
+  run:
+    log_every: 100
+
+
+#(renamed to be shorter) rssm_stoch_only_larger_mlp_prior_with_prior_belief_preset_a:
+z_only_preset_a:
+  rssm_stoch_only_larger_mlp_prior_with_prior_belief: True
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  decoder: {  inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 64, use_posterior_stoch_params_for_first_state: True} # deter isnt used, but we keep it around since some shapes are defined wrt deter
+  #masked kl loss
+  dyn_loss: { impl: kl_masked }
+  rep_loss: { impl: kl_masked }
+  loss_scales: { dyn: 1.0 }
+  batch_size: 512
+  batch_length: 2
+
+z_only_preset_b:
+  rssm_stoch_only_larger_mlp_prior_with_prior_belief: True
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  decoder: {  inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+  rssm: { deter: 2, img_hidden_layers: 0, stoch: 32, classes: 32, use_posterior_stoch_params_for_first_state: False }
+
+  dyn_loss: { impl: kl_masked }
+  rep_loss: { impl: kl_masked }
+
+z_only_longer_horizon_preset:
+  # z_only_preset_a 16_by_64_batch reinforce_cont_actor 3x_dyn_loss 5x_rep_loss discrete_stoch_256_4 imag_horizon_40
+  rssm_stoch_only_larger_mlp_prior_with_prior_belief: True
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  decoder: { inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 256, classes: 4, use_posterior_stoch_params_for_first_state: True } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+  #masked kl loss
+  dyn_loss: { impl: kl_masked }
+  rep_loss: { impl: kl_masked }
+
+
+  batch_size: 16
+  batch_length: 64
+  actor_grad_cont: reinforce
+  loss_scales: { dyn: 1.5, rep: 0.5 }
+  imag_horizon: 40
+
+draw_plan2explore:
+  # rs1e7 plan2explore
+  #disag_inpt_stoch_stoch_params retnorm_max_100 p2e_tgt_embed
+  disag_head: { inputs: [ stoch_params, stoch, action ] }
+  retnorm: { max: 100.0 }
+  disag_target: [ embed ]
+  replay_size: 1e7
+
+  expl_behavior: Explore
+  expl_rewards: { extr: 0.0, disag: 1.0 }
+  run:
+    script: train_eval
+    eval_every: 5e4
+    eval_eps: 100
+
+july_td_dreamer_plan2explore:
+  # rs1e7 plan2explore
+  #disag_inpt_stoch_stoch_params retnorm_max_100 p2e_tgt_embed
+  disag_head: { inputs: [ stoch_params, action ] }
+  retnorm: { max: 100.0 }
+  disag_target: [ embed ]
+  replay_size: 1e7
+
+  expl_behavior: Explore
+  expl_rewards: { extr: 0.0, disag: 1.0 }
+  run:
+    script: train_eval
+    eval_every: 5e4
+    eval_eps: 100
+
+july_p2e_preset:
+  # disag_inpt_stoch_stoch_params retnorm_max_100 p2e_tgt_embed
+  disag_head: { inputs: [ stoch_params, stoch, action ] }
+  retnorm: { max: 100.0 }
+  disag_target: [ embed ]
+
+
+heads_agent_see_post_and_prior_stoch:
+  actor: { inputs: [ prior_stoch, stoch ] }
+  critic: { inputs: [ prior_stoch, stoch ] }
+  decoder: { inputs: [ prior_stoch, stoch ] }
+  reward_head: { inputs: [ prior_stoch, stoch ] }
+  cont_head: { inputs: [ prior_stoch, stoch ] }
+  disag_head: { inputs: [ prior_stoch, stoch, action ] }
+
+heads_agent_post_see_post_and_prior_stoch:
+  actor: { inputs: [ prior_stoch, stoch ] }
+  critic: { inputs: [ prior_stoch, stoch ] }
+  decoder: { inputs: [ prior_stoch, stoch ] }
+  reward_head: { inputs: [ prior_stoch, stoch ] }
+  cont_head: { inputs: [ prior_stoch, stoch ] }
+  disag_head: { inputs: [ prior_stoch, stoch, action ] }
+  rssm: {posterior_takes_prior_stoch_as_input: True}
+  grounded_rssm: {posterior_takes_prior_stoch_as_input: True}
+
+disag_inpt_stoch_stoch_params:
+  disag_head: { inputs: [ stoch_params, stoch, action ] }
+
+#  data_loaders: 0
+#  data_load_prefetch_source: 1
+#  data_load_prefetch_batch: 3
+
+# (renamed to be shorter) rssm_stoch_only_larger_mlp_prior_with_prior_belief_preset_a_decode_stoch_params_as_deter:
+z_only_preset_a_decode_stoch_params:
+  rssm_stoch_only_larger_mlp_prior_with_prior_belief: True
+  actor: { inputs: [ stoch, deter ] }
+  critic: { inputs: [ stoch, deter ] }
+  decoder: {  inputs: [ stoch, deter ] }
+  reward_head: { inputs: [ stoch, deter ] }
+  cont_head: { inputs: [ stoch, deter ] }
+  disag_head: { inputs: [ stoch, deter, action ] }
+
+  rssm: { img_hidden_layers: 0, stoch: 32, classes: 32, use_posterior_stoch_params_for_first_state: False, decode_stoch_params_as_deter: True}
+
+  #masked kl loss
+  dyn_loss: { impl: kl_masked }
+  rep_loss: { impl: kl_masked }
+#  loss_scales: { dyn: 1.0 }
+
+  batch_size: 16
+  batch_length: 64
+
+policy_only_sees_stoch:
+  actor: { inputs: [ stoch ] }
+
+posterior_takes_prior_deter_as_input:
+  rssm: {posterior_takes_prior_deter_as_input: True}
+  grounded_rssm: {posterior_takes_prior_deter_as_input: True}
+
+posterior_takes_prior_stoch_as_input:
+  rssm: {posterior_takes_prior_stoch_as_input: True}
+  grounded_rssm: {posterior_takes_prior_stoch_as_input: True}
+
+post_takes_prior_stoch:
+  # shorthand for posterior_takes_prior_stoch_as_input
+  rssm: {posterior_takes_prior_stoch_as_input: True}
+  grounded_rssm: {posterior_takes_prior_stoch_as_input: True}
+
+only_stoch_given_to_agent:
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+
+only_stoch_given_to_heads:
+  decoder: {  inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+
+only_stoch_as_input:
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  decoder: {  inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+
+
+stoch_params_given_to_disag_and_image_head_only:
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  decoder: {  inputs: [ stoch, stoch_params ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, stoch_params, action ] }
+
+heads_and_agent_see_stoch_and_stoch_params:
+  actor: { inputs: [ stoch, stoch_params ] }
+  critic: { inputs: [ stoch, stoch_params ] }
+  decoder: {  inputs: [ stoch, stoch_params ] }
+  reward_head: { inputs: [ stoch, stoch_params ] }
+  cont_head: { inputs: [ stoch, stoch_params ] }
+  disag_head: { inputs: [ stoch, stoch_params, action ] }
+
+
+multiple_stoch_presets:
+  # heads_and_agent_see_stoch_and_stoch_params
+  actor: { inputs: [ stoch, stoch_params ] }
+  critic: { inputs: [ stoch, stoch_params ] }
+  decoder: {  inputs: [ stoch, stoch_params ] }
+  reward_head: { inputs: [ stoch, stoch_params ] }
+  cont_head: { inputs: [ stoch, stoch_params ] }
+  disag_head: { inputs: [ stoch, stoch_params, action ] }
+
+  # dont_use_posterior_stoch_params_for_first_state  stoch_params_include_unimix
+  rssm: { use_posterior_stoch_params_for_first_state: False, stoch_params_include_unimix: True}
+
+
+agent_sees_stoch_params:
+  actor: { inputs: [ stoch_params ] }
+  critic: { inputs: [ stoch_params ] }
+
+agent_sees_stoch_only:
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+
+agent_sees_stoch_raw_logits:
+  actor: { inputs: [ stoch_raw_logits ] }
+  critic: { inputs: [ stoch_raw_logits ] }
+
+dont_use_posterior_stoch_params_for_first_state:
+  rssm: { use_posterior_stoch_params_for_first_state: False }
+
+dont_use_post_stochprms_for_first_s:
+  rssm: { use_posterior_stoch_params_for_first_state: False }
+
+no_post_stchprms:
+  rssm: { use_posterior_stoch_params_for_first_state: False }
+
+
+use_relaxed_cat_temp_1:
+  rssm:
+    use_relaxed_categorical_dist: True
+    relaxed_categorical_temperature: 1.0
+  grounded_rssm:
+    use_relaxed_categorical_dist: True
+    relaxed_categorical_temperature: 1.0
+
+use_relaxed_cat_temp_2:
+  rssm:
+    use_relaxed_categorical_dist: True
+    relaxed_categorical_temperature: 2.0
+  grounded_rssm:
+    use_relaxed_categorical_dist: True
+    relaxed_categorical_temperature: 2.0
+
+use_relaxed_cat_temp_0p5:
+  rssm:
+    use_relaxed_categorical_dist: True
+    relaxed_categorical_temperature: 0.5
+  grounded_rssm:
+    use_relaxed_categorical_dist: True
+    relaxed_categorical_temperature: 0.5
+
+use_relaxed_cat_temp_3:
+  rssm:
+    use_relaxed_categorical_dist: True
+    relaxed_categorical_temperature: 3.0
+  grounded_rssm:
+    use_relaxed_categorical_dist: True
+    relaxed_categorical_temperature: 3.0
+
+
+use_relaxed_cat_temp_4:
+  rssm:
+    use_relaxed_categorical_dist: True
+    relaxed_categorical_temperature: 4.0
+  grounded_rssm:
+    use_relaxed_categorical_dist: True
+    relaxed_categorical_temperature: 4.0
+
+
+td_dreamer:
+  td_deterministic_model: True
+  td_loss_rho: 0.5
+  batch_size: 128
+  batch_length: 4 # possibly important that this is small for TD objective, TD-MPC2 uses batch length/horizon of 3 (ours is 4 (initial state plus 3 transitions))
+
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 8 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+  actor: { inputs: [ stoch_params ] }
+  critic: { inputs: [ stoch_params ] }
+  decoder: { inputs: [ stoch_params ] }
+  reward_head: { inputs: [ stoch_params ] }
+  cont_head: { inputs: [ stoch_params ] }
+  disag_head: { inputs: [ stoch_params, action ] }
+  disag_target: [ stoch_params ]
+
+  data_loaders: 0
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 3
+
+td_2_hidden_layers:
+  rssm: { img_hidden_layers: 2 }
+
+td_no_hidden_layers:
+  rssm: { img_hidden_layers: 0 }
+
+rssm_no_hidden_layers:
+  rssm: { img_hidden_layers: 0 }
+
+
+td_dreamer_p2e_apr_20_preset:
+  # td_dreamer
+  td_deterministic_model: True
+  td_loss_rho: 0.5
+  batch_size: 128
+  batch_length: 4 # possibly important that this is small for TD objective, TD-MPC2 uses batch length/horizon of 3 (ours is 4 (initial state plus 3 transitions))
+
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 8 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+  actor: { inputs: [ stoch_params ] }
+  critic: { inputs: [ stoch_params ] }
+  decoder: { inputs: [ stoch_params ] }
+  reward_head: { inputs: [ stoch_params ] }
+  cont_head: { inputs: [ stoch_params ] }
+  disag_head: { inputs: [ stoch_params, action ] }
+  disag_target: [ stoch_params ]
+
+  data_loaders: 0
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 3
+
+  # consistency_loss_coef_2
+  loss_scales: { consistency: 2.0 }
+
+  #5x_wm_lr
+  model_opt: { lr: 5e-4 }
+  bb_model_opt: { lr: 5e-4 }
+
+  # 5x_agent_lr
+  actor_opt: { lr: 1.5e-4 }
+  critic_opt: { lr: 1.5e-4 }
+
+  # reinforce_cont_actor
+  actor_grad_cont: reinforce
+
+  #td_use_dyn_consistency_loss
+  td_use_dyn_consistency_loss: True
+
+  #plan2explore
+  expl_behavior: Explore
+  expl_rewards: { extr: 0.0, disag: 1.0 }
+  run:
+    script: train_eval
+    eval_every: 5e4
+    eval_eps: 100
+
+td_dreamer_sept_23_preset:
+  # td_dreamer consistency_loss_coef_2 reinforce_cont_actor td_use_dyn_consistency_loss 5x_wm_lr 5x_agent_lr 256_by_4_batch td_2_hidden_layers
+  td_deterministic_model: True
+  td_loss_rho: 0.5
+  batch_size: 256
+  batch_length: 4 # possibly important that this is small for TD objective, TD-MPC2 uses batch length/horizon of 3 (ours is 4 (initial state plus 3 transitions))
+
+  rssm: { deter: 2,  img_hidden_layers: 2, stoch: 64, classes: 8 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+  # consistency_loss_coef_2
+  loss_scales: { consistency: 2.0 }
+
+  #5x_wm_lr
+  model_opt: { lr: 5e-4 }
+  bb_model_opt: { lr: 5e-4 }
+
+  # 5x_agent_lr
+  actor_opt: { lr: 1.5e-4 }
+  critic_opt: { lr: 1.5e-4 }
+
+  # reinforce_cont_actor
+  actor_grad_cont: reinforce
+
+  #td_use_dyn_consistency_loss
+  td_use_dyn_consistency_loss: True
+
+  actor: { inputs: [ stoch_params ] }
+  critic: { inputs: [ stoch_params ] }
+  decoder: { inputs: [ stoch_params ] }
+  reward_head: { inputs: [ stoch_params ] }
+  cont_head: { inputs: [ stoch_params ] }
+  disag_head: { inputs: [ stoch_params, action ] }
+
+  disag_target: [ stoch_params ]
+
+  data_loaders: 0
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 3
+
+
+
+td_stochastic:
+  td_stochastic_model: True
+  td_loss_rho: 0.5
+  batch_size: 128
+  batch_length: 4 # possibly important that this is small for TD objective, TD-MPC2 uses batch length/horizon of 3 (ours is 4 (initial state plus 3 transitions))
+
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 8 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+  actor: { inputs: [ stoch_params, stoch ] }
+  critic: { inputs: [ stoch_params, stoch ] }
+  decoder: { inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch_params, stoch, action ] }
+  disag_target: [ stoch ]
+
+  data_loaders: 0
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 3
+
+td_stochastic_all_inputs_for_all_heads:
+  td_stochastic_model: True
+  td_loss_rho: 0.5
+  batch_size: 128
+  batch_length: 4 # possibly important that this is small for TD objective, TD-MPC2 uses batch length/horizon of 3 (ours is 4 (initial state plus 3 transitions))
+
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 8 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+  actor: { inputs: [ stoch_params, stoch ] }
+  critic: { inputs: [ stoch_params, stoch ] }
+  decoder: { inputs: [ stoch_params, stoch ] }
+  reward_head: { inputs: [ stoch_params, stoch ] }
+  cont_head: { inputs: [ stoch_params, stoch ] }
+  disag_head: { inputs: [ stoch_params, stoch, action ] }
+  disag_target: [ stoch ]
+
+  data_loaders: 0
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 3
+
+td_stochastic_only_stoch_input:
+  td_stochastic_model: True
+  td_loss_rho: 0.5
+  batch_size: 128
+  batch_length: 4 # possibly important that this is small for TD objective, TD-MPC2 uses batch length/horizon of 3 (ours is 4 (initial state plus 3 transitions))
+
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 8 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  decoder: { inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+  disag_target: [ stoch ]
+
+  data_loaders: 0
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 3
+
+
+td_stochastic_only_stoch_params_input:
+  td_stochastic_model: True
+  td_loss_rho: 0.5
+  batch_size: 128
+  batch_length: 4 # possibly important that this is small for TD objective, TD-MPC2 uses batch length/horizon of 3 (ours is 4 (initial state plus 3 transitions))
+
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 8 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+  actor: { inputs: [ stoch_params ] }
+  critic: { inputs: [ stoch_params ] }
+  decoder: { inputs: [ stoch_params ] }
+  reward_head: { inputs: [ stoch_params ] }
+  cont_head: { inputs: [ stoch_params ] }
+  disag_head: { inputs: [ stoch_params, action ] }
+  disag_target: [ stoch ]
+
+  data_loaders: 0
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 3
+
+td_compressed_stochastic_only_stoch_params_input:
+  td_compressed_stochastic_model: True
+  td_loss_rho: 0.5
+  batch_size: 128
+  batch_length: 4 # possibly important that this is small for TD objective, TD-MPC2 uses batch length/horizon of 3 (ours is 4 (initial state plus 3 transitions))
+
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 8 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+  actor: { inputs: [ stoch_params ] }
+  critic: { inputs: [ stoch_params ] }
+  decoder: { inputs: [ stoch_params ] }
+  reward_head: { inputs: [ stoch_params ] }
+  cont_head: { inputs: [ stoch_params ] }
+  disag_head: { inputs: [ stoch_params, action ] }
+  disag_target: [ stoch ]
+
+  data_loaders: 0
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 3
+
+
+td_dummy_stochastic_only_stoch_params_input:
+  td_dummy_stochastic_model: True
+  td_loss_rho: 0.5
+  batch_size: 128
+  batch_length: 4 # possibly important that this is small for TD objective, TD-MPC2 uses batch length/horizon of 3 (ours is 4 (initial state plus 3 transitions))
+
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 8 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+  actor: { inputs: [ stoch_params ] }
+  critic: { inputs: [ stoch_params ] }
+  decoder: { inputs: [ stoch_params ] }
+  reward_head: { inputs: [ stoch_params ] }
+  cont_head: { inputs: [ stoch_params ] }
+  disag_head: { inputs: [ stoch_params, action ] }
+  disag_target: [ stoch ]
+
+  data_loaders: 0
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 3
+
+
+td_dreamer_longer_horizon:
+  td_deterministic_model: True
+  td_loss_rho: 0.75
+  batch_size: 128
+  batch_length: 8 # possibly important that this is small for TD objective, TD-MPC2 uses batch length/horizon of 3 (ours is 4 (initial state plus 3 transitions))
+
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 8 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+  actor: { inputs: [ stoch_params ] }
+  critic: { inputs: [ stoch_params ] }
+  decoder: { inputs: [ stoch_params ] }
+  reward_head: { inputs: [ stoch_params ] }
+  cont_head: { inputs: [ stoch_params ] }
+  disag_head: { inputs: [ stoch_params, action ] }
+  disag_target: [ stoch_params ]
+
+  data_loaders: 0
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 3
+
+rho_0p5:
+  td_loss_rho: 0.5
+
+
+td_dreamer_stoch_32_32:
+  td_deterministic_model: True
+  td_loss_rho: 0.5
+  batch_size: 128
+  batch_length: 4 # possibly important that this is small for TD objective, TD-MPC2 uses batch length/horizon of 3 (ours is 4 (initial state plus 3 transitions))
+
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 32, classes: 32 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+
+  actor: { inputs: [ stoch_params ] }
+  critic: { inputs: [ stoch_params ] }
+  decoder: { inputs: [ stoch_params ] }
+  reward_head: { inputs: [ stoch_params ] }
+  cont_head: { inputs: [ stoch_params ] }
+  disag_head: { inputs: [ stoch_params, action ] }
+  disag_target: [ stoch_params ]
+
+  data_loaders: 0
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 3
+
+consistency_loss_coef_1:
+  loss_scales: { consistency: 1.0 }
+
+consistency_loss_coef_2:
+  loss_scales: { consistency: 2.0 }
+
+consistency_loss_coef_3:
+  loss_scales: { consistency: 3.0 }
+
+lower_reconstruction_loss:
+  loss_scales: { image: 0.5, vector: 0.5, reward: 0.5, cont: 0.5 }
+
+td_use_dyn_consistency_loss:
+  td_use_dyn_consistency_loss: True
+
+use_rep_loss_with_td:
+  use_rep_loss_with_td: True
+
+td_small:
+  td_deterministic_model_small: True
+
+imag_horizon_64:
+  imag_horizon: 64
+
+imag_horizon_50:
+  imag_horizon: 50
+
+imag_horizon_40:
+  imag_horizon: 40
+
+imag_horizon_30:
+  imag_horizon: 30
+
+imag_horizon_25:
+  imag_horizon: 25
+
+imag_horizon_20:
+  imag_horizon: 20
+
+imag_horizon_10:
+  imag_horizon: 10
+
+imag_horizon_7:
+  imag_horizon: 7
+
+imag_horizon_5:
+  imag_horizon: 5
+
+short_imag_horizon:
+  imag_horizon: 6
+
+short_imag_horizon_4:
+  imag_horizon: 4
+
+td_context_is_head_inputs:
+  td_context_is_head_inputs: True
+
+apply_rho_to_expl_loss:
+  apply_rho_to_expl_loss: True
+
+deterministic_z_only_dreamer_model:
+  deterministic_z_only_dreamer_model: True
+  actor: { inputs: [ stoch_params ] }
+  critic: { inputs: [ stoch_params ] }
+  decoder: { inputs: [ stoch_params ] }
+  reward_head: { inputs: [ stoch_params ] }
+  cont_head: { inputs: [ stoch_params ] }
+  disag_head: { inputs: [ stoch_params, action ] }
+
+  actor_grad_cont: reinforce
+
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 8 } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+  #masked kl loss
+  dyn_loss: { impl: kl_masked, free: 0.0 }
+  rep_loss: { impl: kl_masked, free: 0.0 }
+  loss_scales: { dyn: 1.0 }
+
+  batch_size: 512
+  batch_length: 2
+
+  data_loaders: 0
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 3
+
+rssm_regularized_deter:
+  rssm_regularized_deter: True
+  rssm: { deter: 1024, stoch: 32, classes: 32 }
+
+rssm_regularized_deter_small_stoch:
+  rssm_regularized_deter: True
+  rssm: { deter: 512, stoch: 32, classes: 16 }
+
+
+rssm_regularized_deter_no_unimix_on_deter:
+  rssm_regularized_deter_no_unimix_on_deter: True
+  rssm: { deter: 1024, stoch: 32, classes: 32 }
+
+
+#
+#add_residual:
+#  grounded_rssm_stoch_only_larger_mlp_prior_with_prior_belief_and_residual: True
+#  grounded_rssm_stoch_only_larger_mlp_prior_with_prior_belief: False
+
+
+dont_optimize_rssm_in_train_alt:
+  optimize_rssm_in_train_alt: False
+
+optimize_rssm_in_train_alt:
+  optimize_rssm_in_train_alt: True
+
+masked_kl_loss:
+  dyn_loss: { impl: kl_masked }
+  rep_loss: { impl: kl_masked }
+
+faster_agent_lr:
+  actor_opt: {lr: 3e-4}
+  critic_opt: {lr: 3e-4}
+
+10x_agent_lr:
+  actor_opt: {lr: 3e-4}
+  critic_opt: {lr: 3e-4}
+
+5x_agent_lr:
+  actor_opt: {lr: 1.5e-4}
+  critic_opt: {lr: 1.5e-4}
+
+agent_lr_2en4:
+  actor_opt: { lr: 2e-4 }
+  critic_opt: { lr: 2e-4 }
+
+3x_agent_lr:
+  actor_opt: {lr: 9e-5}
+  critic_opt: {lr: 9e-5}
+
+slower_agent_lr:
+  actor_opt: {lr: 3e-6}
+  critic_opt: {lr: 3e-6}
+
+
+critic_sees_s_only:
+  critic: { inputs: [ symlog_grounded ]}
+
+actor_sees_s_only:
+  actor:  { inputs: [ symlog_grounded ]}
+
+normalize_dmcsim_state_in_env:
+  env:
+    dmcsim: { normalize_gt_state: True }
+
+
+smaller_encoder_mlp:
+  encoder: { mlp_layers: 4, mlp_units: 512 }
+
+1p5_dyn_loss:
+  loss_scales: { dyn: 0.75 }
+
+one_tenth_dyn_loss:
+  loss_scales: { dyn: 0.05 }
+
+half_dyn_loss:
+  loss_scales: { dyn: 0.25 }
+
+1x_dyn_loss:
+  loss_scales: { dyn: 0.5 }
+
+2x_dyn_loss:
+  loss_scales: { dyn: 1.0 }
+
+3x_dyn_loss:
+  loss_scales: { dyn: 1.5 }
+
+5x_dyn_loss:
+  loss_scales: { dyn: 2.5 }
+
+10x_dyn_and_rep_loss:
+  loss_scales: { dyn: 5.0, rep: 1.0 }
+
+half_rep_loss:
+  loss_scales: { rep: 0.05 }
+
+dyn_loss_0p5:
+  loss_scales: { dyn: 0.5 }
+
+dyn_loss_0p33:
+  loss_scales: { dyn: 0.33 }
+
+rep_loss_0p05:
+  loss_scales: { rep: 0.05 }
+
+rep_loss_0p033:
+  loss_scales: { rep: 0.033 }
+
+1x_rep_loss:
+  loss_scales: { rep: 0.1 }
+
+2x_rep_loss:
+  loss_scales: { rep: 0.2 }
+
+5x_rep_loss:
+  loss_scales: { rep: 0.5 }
+
+10x_rep_loss:
+  loss_scales: { rep: 1.0 }
+
+one_tenth_image_loss:
+  loss_scales: { image: 0.1 }
+
+default_free_bits:
+  dyn_loss: { free: 1.0 }
+  rep_loss: { free: 1.0 }
+
+1p5x_free_bits:
+  dyn_loss: { free: 1.5 }
+  rep_loss: { free: 1.5 }
+
+
+2x_free_bits:
+  dyn_loss: { free: 2.0 }
+  rep_loss: { free: 2.0 }
+
+half_free_bits:
+  dyn_loss: { free: 0.5 }
+  rep_loss: { free: 0.5 }
+
+one_tenth_free_bits:
+  dyn_loss: { free: 0.1 }
+  rep_loss: { free: 0.1 }
+
+no_free_bits:
+  dyn_loss: { free: 0.0 }
+  rep_loss: { free: 0.0 }
+
+fb_0_dyn_1_rep:
+  dyn_loss: { free: 0.0 }
+  rep_loss: { free: 1.0 }
+
+fb_0_dyn_2_rep:
+  dyn_loss: { free: 0.0 }
+  rep_loss: { free: 2.0 }
+
+fb_0_dyn_5_rep:
+  dyn_loss: { free: 0.0 }
+  rep_loss: { free: 5.0 }
+
+2x_reconstruction_loss:
+  loss_scales: { image: 2.0, vector: 2.0}
+
+
+also_apply_head_losses_from_priors:
+  also_apply_head_losses_from_priors: True
+
+img_0_hidden_layers:
+  rssm: { img_hidden_layers: 0 }
+  grounded_rssm: { img_hidden_layers: 0 }
+
+img_1_hidden_layer:
+  rssm: {img_hidden_layers: 1}
+  grounded_rssm: { img_hidden_layers: 1 }
+
+img_2_hidden_layers:
+  rssm: {img_hidden_layers: 2}
+  grounded_rssm: { img_hidden_layers: 2 }
+
+img_3_hidden_layers:
+  rssm: {img_hidden_layers: 3}
+  grounded_rssm: { img_hidden_layers: 3 }
+
+obs_1_hidden_layer:
+  rssm: { obs_hidden_layers: 1 }
+  grounded_rssm: { obs_hidden_layers: 1 }
+
+obs_2_hidden_layers:
+  rssm: { obs_hidden_layers: 2 }
+  grounded_rssm: { obs_hidden_layers: 2 }
+
+img2h_obs1h_1024u:
+  #img_2_hidden_layers obs_1_hidden_layer rssm_units_1024
+  rssm: { img_hidden_layers: 2, obs_hidden_layers: 1, units: 1024  }
+  grounded_rssm: { img_hidden_layers: 2, obs_hidden_layers: 1, units: 1024 }
+
+use_gru_with_prior_belief:
+  rssm: {use_gru_with_prior_belief: True}
+
+
+stoch_params_include_unimix:
+  rssm: {stoch_params_include_unimix: True}
+
+rssm_gaussian_stoch:
+  rssm: {classes: 0}
+
+gaus_stoch_16:
+  rssm: { stoch: 16, classes: 0 }
+
+gaus_stoch_32:
+  rssm: { stoch: 32, classes: 0 }
+
+gaus_stoch_64:
+  rssm: { stoch: 64, classes: 0 }
+
+rssm_gaussian_stoch_larger:
+  rssm: { stoch: 256, classes: 0 }
+
+rssm_gaussian_stoch_256:
+  rssm: { stoch: 256, classes: 0 }
+
+rssm_gaussian_stoch_512:
+  rssm: { stoch: 512, classes: 0 }
+
+
+#stoch_free_vars:
+#  rssm: {use_half_of_stoch_as_free_variables: True}
+#  actor: { inputs: [ stoch, prior_stoch_params ] }
+#  critic: { inputs: [ stoch, prior_stoch_params ] }
+
+rssm_unroll:
+  rssm: {unroll: True}
+
+rssm_use_post_prms_for_first:
+  rssm: {use_posterior_stoch_params_for_first_state: True}
+
+rssm_use_post_prms_for_all:
+  rssm: {use_posterior_stoch_params_for_all_states: True, use_posterior_stoch_params_for_first_state: False}
+
+rssm_dynamics_doesnt_take_prev_stoch:
+  rssm: {dynamics_takes_prev_stoch_as_input: False}
+
+rssm_dynamics_doesnt_take_prev_stoch_params:
+  rssm: {dynamics_takes_prev_stoch_params_as_input: False}
+
+
+disable_wm_train_loss:
+  disable_wm_train_loss: True
+
+dmcsim_omit_image:
+  env:
+    dmcsim: {omit_image: True}
+
+freeze_wm:
+  freeze_wm: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+dont_load_rl_agent_from_checkpoint:
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/ ]
+
+ensemble_residual:
+  rssm: {residual: 'ensemble_residual'}
+  grounded_rssm: {residual: 'ensemble_residual'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+ensemble_residual_small_td:
+  rssm: { residual: 'ensemble_residual_small_td' }
+  grounded_rssm: { residual: 'ensemble_residual_small_td' }
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+ensemble_residual_td:
+  rssm: { residual: 'ensemble_residual_td' }
+  grounded_rssm: { residual: 'ensemble_residual_td' }
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+ensemble_residual_old:
+  rssm: {residual: 'ensemble_residual_old'}
+  grounded_rssm: {residual: 'ensemble_residual_old'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+ensemble_residual_small:
+  rssm: {residual: 'ensemble_residual_small'}
+  grounded_rssm: {residual: 'ensemble_residual_small'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+ensemble_residual_extra_small:
+  rssm: {residual: 'ensemble_residual_extra_small'}
+  grounded_rssm: {residual: 'ensemble_residual_extra_small'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+ensemble_residual_extra_small_10_members:
+  rssm: {residual: 'ensemble_residual_extra_small_10_members'}
+  grounded_rssm: {residual: 'ensemble_residual_extra_small_10_members'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+ensemble_residual_extra_small_4_members:
+  rssm: {residual: 'ensemble_residual_extra_small_4_members'}
+  grounded_rssm: {residual: 'ensemble_residual_extra_small_4_members'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+ensemble_residual_extra_small_1_member:
+  data_loaders: 0
+  data_load_prefetch_source: 10
+  data_load_prefetch_batch: 4
+  rssm: {residual: 'ensemble_residual_extra_small_1_member'}
+  grounded_rssm: {residual: 'ensemble_residual_extra_small_1_member'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+ensemble_residual_extra_small_1_member_cond_prior_params:
+  data_loaders: 0
+  data_load_prefetch_source: 10
+  data_load_prefetch_batch: 4
+  rssm: {residual: 'ensemble_residual_extra_small_1_member_conditioned_on_prior_stoch_params'}
+  grounded_rssm: {residual: 'ensemble_residual_extra_small_1_member_conditioned_on_prior_stoch_params'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+ensemble_residual_extra_small_deploy:
+  rssm: {residual: 'ensemble_residual_extra_small'}
+  grounded_rssm: {residual: 'ensemble_residual_extra_small'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+
+ensemble_residual_4x_small:
+  rssm: {residual: 'ensemble_residual_4x_small'}
+  grounded_rssm: {residual: 'ensemble_residual_4x_small'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+ensemble_residual_large:
+  rssm: {residual: 'ensemble_residual_large'}
+  grounded_rssm: {residual: 'ensemble_residual_large'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+replacement_dynamics_function_extra_small:
+  rssm: {residual: 'replacement_dynamics_function_extra_small'}
+  grounded_rssm: {residual: 'replacement_dynamics_function_extra_small'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+replacement_dynamics_function_extra_small_prior_stoch_params:
+  rssm: {residual: 'replacement_dynamics_function_extra_small_conditioned_on_prior_stoch_params'}
+  grounded_rssm: {residual: 'replacement_dynamics_function_extra_small_conditioned_on_prior_stoch_params'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+replacement_dynamics_function_extra_small_prior_stoch_params_1_mem:
+  data_loaders: 0
+  data_load_prefetch_source: 10
+  data_load_prefetch_batch: 4
+  rssm: {residual: 'replacement_dynamics_function_extra_small_conditioned_on_prior_stoch_params_1_mem'}
+  grounded_rssm: {residual: 'replacement_dynamics_function_extra_small_conditioned_on_prior_stoch_params_1_mem'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+replacement_dynamics_function_extra_small_prior_sampled_stoch:
+  rssm: {residual: 'replacement_dynamics_function_extra_small_conditioned_on_sampled_prior_stoch'}
+  grounded_rssm: {residual: 'replacement_dynamics_function_extra_small_conditioned_on_sampled_prior_stoch'}
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+ensemble_residual_extra_small_prev_stoch_params_only:
+  rssm: { residual: 'ensemble_residual_extra_small_conditioned_on_prev_stoch_params_only' }
+  grounded_rssm: { residual: 'ensemble_residual_extra_small_conditioned_on_prev_stoch_params_only' }
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+ensemble_residual_free_bits:
+  rssm: { residual: 'ensemble_residual_free_bits' }
+  grounded_rssm: { residual: 'ensemble_residual_free_bits' }
+  actor_grad_cont: reinforce
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+res_nrm_wm_ls:
+  normal_wm_loss_for_residual_only: True
+  # also includes freeze_wm preset:
+  freeze_wm: True
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+res_takes_stoch_params:
+  rssm: { residual_should_take_prev_stoch_params_as_input: True}
+  grounded_rssm: { residual_should_take_prev_stoch_params_as_input: True}
+
+train_student_posterior:
+  rssm: { train_student_posterior: True}
+  grounded_rssm: { train_student_posterior: True }
+
+always_use_student_posterior:
+  rssm: { train_student_posterior: True, always_use_student_posterior: True }
+  grounded_rssm: { train_student_posterior: True, always_use_student_posterior: True }
+
+
+student_rep_scale_0p1:
+  loss_scales: { student_rep: 0.1 }
+
+
+dont_load_wm_opt_or_agent:
+  jax:
+    dont_load_weights_prefixes_from_checkpoint: [ agent/task_behavior/, agent/expl_behavior/, agent/wm/model_opt/, agent/wm/black_box_model_opt/ ]
+
+load_earliest_replay_steps_first:
+  load_earliest_replay_steps_first: True
+
+rssm_stoch_params_are_raw_logits:
+  rssm: {stoch_params_are_raw_logits: True}
+
+agent_and_heads_see_stoch_and_stoch_params:
+  actor: { inputs: [ stoch, stoch_params ] }
+  critic: { inputs: [ stoch, stoch_params ] }
+  decoder: { inputs: [ stoch, stoch_params ] }
+  reward_head: { inputs: [ stoch, stoch_params ] }
+  cont_head: { inputs: [ stoch, stoch_params ] }
+  disag_head: { inputs: [ stoch, stoch_params, action ] }
+
+
+dmcsim_env_is_real:
+  env:
+    dmcsim: { is_real_env: True }
+  force_replay_as_real: True
+
+force_replay_as_real:
+  force_replay_as_real: True
+
+perform_train_on_all_data_sources:
+  perform_train_on_all_data_sources: True
+
+rep_on_res:
+  train_rep_on_residual: True
+
+grounded_transfer_preset_a:
+  # grounded_rssm_stoch_only_larger_mlp_prior_with_prior_belief sup_grounded_with_grads 512_by_2_batch perform_train_on_all_data_sources dmcsim_env_is_real dmcsim_omit_image small_batch_len_loaders_single_thread
+
+  grounded_rssm_stoch_only_larger_mlp_prior_with_prior_belief: True
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  decoder: { inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 64, use_posterior_stoch_params_for_first_state: True } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+  grounded_rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 64, use_posterior_stoch_params_for_first_state: True } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+  #masked kl loss
+  dyn_loss: { impl: kl_masked }
+  rep_loss: { impl: kl_masked }
+  loss_scales: { dyn: 1.0 }
+
+  use_grounded_rssm: True
+  use_heads_from_vanilla_dreamer: False
+  grad_heads: [ grounded_decoder, grounded_reward, grounded_cont ]
+  train_grounded_nets_on_experience: True
+  train_grounded_nets_on_world_model_train_pred_states: True
+  train_grounded_nets_on_imagined_rollout_pred_states: True
+
+  sim_query_data_same_in_format_as_normal_experience: True
+  optimize_rssm_in_train_alt: False
+#  run:
+#    log_every: 100
+
+  supervise_grounded_state: True
+
+  batch_size: 512
+  batch_length: 2
+
+  perform_train_on_all_data_sources: True
+
+  env:
+    dmcsim: { omit_image: True }
+
+  data_loaders: 0
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 3
+
+grounded_transfer_preset_b:
+  # --configs pred_state_data_uses_gt_state grounded_transfer_preset_a 16_by_64_batch optimize_rssm_in_train_alt \
+  grounded_rssm_stoch_only_larger_mlp_prior_with_prior_belief: True
+  actor: { inputs: [ stoch ] }
+  critic: { inputs: [ stoch ] }
+  decoder: { inputs: [ stoch ] }
+  reward_head: { inputs: [ stoch ] }
+  cont_head: { inputs: [ stoch ] }
+  disag_head: { inputs: [ stoch, action ] }
+  rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 64, use_posterior_stoch_params_for_first_state: True } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+  grounded_rssm: { deter: 2,  img_hidden_layers: 1, stoch: 64, classes: 64, use_posterior_stoch_params_for_first_state: True } # deter isnt used, but we keep it around since some shapes are defined wrt deter
+  #masked kl loss
+  dyn_loss: { impl: kl_masked }
+  rep_loss: { impl: kl_masked }
+  loss_scales: { dyn: 1.0 }
+
+  use_grounded_rssm: True
+  use_heads_from_vanilla_dreamer: False
+  grad_heads: [ grounded_decoder, grounded_reward, grounded_cont ]
+  train_grounded_nets_on_experience: True
+  train_grounded_nets_on_world_model_train_pred_states: True
+  train_grounded_nets_on_imagined_rollout_pred_states: True
+
+  sim_query_data_same_in_format_as_normal_experience: True
+  optimize_rssm_in_train_alt: False
+  #  run:
+  #    log_every: 100
+
+  supervise_grounded_state: True
+
+  batch_size: 16
+  batch_length: 64
+
+  perform_train_on_all_data_sources: True
+
+  env:
+    dmcsim: { omit_image: True }
+
+#  data_loaders: 0
+#  data_load_prefetch_source: 1
+#  data_load_prefetch_batch: 3
+
+  pred_state_data_uses_gt_state: True
+
+more_loaders:
+  data_loaders: 8
+  data_load_prefetch_source: 20
+  data_load_prefetch_batch: 10
+
+small_batch_len_loaders:
+  data_loaders: 1
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 10
+
+small_batch_len_loaders2:
+  data_loaders: 1
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 2
+
+small_batch_len_loaders3:
+  data_loaders: 1
+  data_load_prefetch_source: 2
+  data_load_prefetch_batch: 2
+
+small_batch_len_loaders4:
+  data_loaders: 2
+  data_load_prefetch_source: 2
+  data_load_prefetch_batch: 2
+
+small_batch_len_loaders_single_thread:
+  data_loaders: 0
+  data_load_prefetch_source: 1
+  data_load_prefetch_batch: 3
+
+single_loader_large:
+  data_loaders: 0
+  data_load_prefetch_source: 10
+  data_load_prefetch_batch: 4
+
+loaders_large_buffer:
+  data_loaders: 4
+  data_load_prefetch_source: 30
+  data_load_prefetch_batch: 8
+
+default_data_loaders:
+  data_loaders: 8
+  data_load_prefetch_source: 4
+  data_load_prefetch_batch: 1
+
+single_env:
+  envs: { amount: 1, parallel: none }
+
+no_unimix:
+  rssm: { unimix: 0.0}
+  grounded_rssm: { unimix: 0.0}
+
+disc_vect_dec:
+  decoder: {vector_dist: symlog_disc}
+  grounded_decoder: {vector_dist: symlog_disc}
+
+decoder_image_mean_agg:
+  decoder: {image_dist:   mse_mean_agg, }
+  grounded_decoder: {image_dist:   mse_mean_agg, }
+
+decoder_image_symlog_mse_mean_agg:
+  decoder: {image_dist:   symlog_mse_mean_agg, }
+  grounded_decoder: {image_dist:   symlog_mse_mean_agg, }
+
+decoder_image_symlog_mse:
+  decoder: {image_dist:   symlog_mse, }
+  grounded_decoder: {image_dist:   symlog_mse, }
+
+decoder_vector_mean_agg:
+  decoder: {vector_dist: symlog_mse_mean_agg, }
+  grounded_decoder: {vector_dist: symlog_mse_mean_agg, }
+
+decoder_vector_scaled_mean_agg_0p1:
+  decoder: { vector_dist: scaled_symlog_mse_mean_agg_1e-1, }
+  grounded_decoder: { vector_dist: scaled_symlog_mse_mean_agg_1e-1, }
+
+decoder_vector_scaled_mean_agg_1:
+  decoder: { vector_dist: scaled_symlog_mse_mean_agg_1, }
+  grounded_decoder: { vector_dist: scaled_symlog_mse_mean_agg_1, }
+
+decoder_vector_scaled_mean_agg_10:
+  decoder: { vector_dist: scaled_symlog_mse_mean_agg_10, }
+  grounded_decoder: { vector_dist: scaled_symlog_mse_mean_agg_10, }
+
+decoder_vector_scaled_mean_agg_100:
+  decoder: { vector_dist: scaled_symlog_mse_mean_agg_100, }
+  grounded_decoder: { vector_dist: scaled_symlog_mse_mean_agg_100, }
+
+decoder_vector_scaled_mean_agg_1000:
+  decoder: { vector_dist: scaled_symlog_mse_mean_agg_1000, }
+  grounded_decoder: { vector_dist: scaled_symlog_mse_mean_agg_1000, }
+
+decoder_vector_scaled_mean_agg_10000:
+  decoder: { vector_dist: scaled_symlog_mse_mean_agg_10000, }
+  grounded_decoder: { vector_dist: scaled_symlog_mse_mean_agg_10000, }
+
+decoder_vector_scaled_mean_agg_100000:
+  decoder: { vector_dist: scaled_symlog_mse_mean_agg_100000, }
+  grounded_decoder: { vector_dist: scaled_symlog_mse_mean_agg_100000, }
+
+framestack_image:
+  wrapper: { framestack_image: 2 }
+
+
+actent_3en3:
+  actent: 3e-3
+
+actent_3en4:
+  #default
+  actent: 3e-4
+
+actent_1en4:
+  actent: 1e-4
+
+actent_3en5:
+  actent: 3e-5
+
+actent_3en6:
+  actent: 3e-6
+
+return_lambda_0p5:
+  return_lambda: 0.5
+
+return_lambda_0p8:
+  return_lambda: 0.8
+
+return_lambda_0p9:
+  return_lambda: 0.9
+
+return_lambda_0p98:
+  return_lambda: 0.98
+
+retnorm_max_2:
+  retnorm: { max: 2.0 }
+
+retnorm_max_0p5:
+  retnorm: { max: 0.5 }
+
+retnorm_max_100:
+  retnorm: { max: 100.0 }
+
+faster_critic:
+  slow_critic_fraction: 0.04
+
+faster_critic2:
+  slow_critic_fraction: 0.08
+
+128_stoch_p2e_july_1_preset:
+  # 3x_dyn_loss 5x_rep_loss discrete_stoch_128_8 imag_horizon_40 replay_size_1e7 plan2explore disag_inpt_stoch_stoch_params
+  loss_scales: { dyn: 1.5, rep: 0.5}
+  rssm: { stoch: 128, classes: 8 }
+  grounded_rssm: { stoch: 128, classes: 8 }
+  imag_horizon: 40
+  replay_size: 1e7
+  expl_behavior: Explore
+  expl_rewards: { extr: 0.0, disag: 1.0 }
+  run:
+    script: train_eval
+    eval_every: 5e4
+    eval_eps: 100
+  disag_head: { inputs: [ stoch_params, stoch, action ] }
+
+
+large_disag_head:
+  disag_head: { layers: 5, units: 1024 }
+
+#expl_rewards.extr:                                                 0.0                            (float)
+#expl_rewards.disag:                                                1.0                            (float)
+#expl_opt.opt:                                                      adam                           (str)
+#expl_opt.lr:                                                       0.0001                         (float)
+#expl_opt.eps:                                                      1e-05                          (float)
+#expl_opt.clip:                                                     100.0                          (float)
+#expl_opt.wd:                                                       0.0                            (float)
+#expl_opt.warmup:                                                   0                              (int)
+#disag_head.layers:                                                 2                              (int)
+#disag_head.units:                                                  512                            (int)
+
+episode_length_10:
+  wrapper.length: 10
+
+
+episode_length_100:
+  wrapper.length: 100
+
+episode_length_200:
+  wrapper.length: 200
+
+episode_length_250:
+  wrapper.length: 250
+
+episode_length_300:
+  wrapper.length: 300
+
+episode_length_400:
+  wrapper.length: 400
+
+episode_length_800:
+  wrapper.length: 800
+
+augment_images:
+  apply_image_augmentations: "v1"
+
+augment_images2:
+  apply_image_augmentations: "v2"
+
+augment_images_mask:
+  env:
+    duckiebotssim:
+      separately_return_mask_and_rgb: True
+      use_rcan_instead_of_gt_mask: True
+    duckiebotsreal:
+      separately_return_mask_and_rgb: True
+  apply_image_augmentations: "mask"
+
+decode_orig_image:
+  decoder: { cnn_keys: 'original_image' }
+
+duckiebots_reverse_actions:
+  env:
+    duckiebotssim:
+      reverse_actions: True
+    duckiebotsreal:
+      reverse_actions: True
+
+duckiebots_no_dr:
+  env:
+    duckiebotssim:
+      use_domain_randomization: False
+
+duckiebots_alt_game:
+  env:
+    duckiebotssim:
+      use_alt_game_path: "LinuxAlt"
+
+norm_ic:
+  normalize_image_complement: True
+
+train_fill_50_000:
+  run:
+    train_fill: 50_000
+
+train_fill_100_000:
+  run:
+    train_fill: 100_000
+
+train_fill_200_000:
+  run:
+    train_fill: 200_000
+
+train_fill_400_000:
+  run:
+    train_fill: 400_000
+
+train_fill_600_000:
+  run:
+    train_fill: 600_000
+
+train_fill_1_000_000:
+  run:
+    train_fill: 1_000_000
+
+zero_vanilla_head_loss:
+  loss_scales: { image: 0.0, vector: 0.0, reward: 0.0, cont: 0.0, is_valid: 0.0}
+  data_loaders: 0
+  data_load_prefetch_source: 10
+  data_load_prefetch_batch: 4
+
+no_reward_loss:
+  loss_scales: { reward: 0.0 }
+  data_loaders: 0
+  data_load_prefetch_source: 10
+  data_load_prefetch_batch: 4
+
+reverse_actions_added_to_replay:
+  reverse_actions_added_to_replay: True
+
+duckiebots_real_alt_actions:
+  env:
+    duckiebotsreal:
+      use_alt_action_processing: True
+
+save_max_performance_checkpoint:
+  run:
+    save_max_performance_checkpoint: True
+
+duckiebots_dont_simulate_latency:
+  env:
+    duckiebotssim:
+      simulate_latency: False
+
+no_lat:
+  env:
+    duckiebotssim:
+      simulate_latency: False
+
+use_randomized_synthetic_world:
+  env:
+    duckiebotssim:
+      use_randomized_synthetic_world: True
+
+
+duckiebots_dr_world_no_mask:
+  env:
+    duckiebotssim:
+      use_randomized_synthetic_world: True
+      use_mask: False
+    duckiebotsreal:
+      use_mask: False
+
+duckiebots_dr_world_with_mask_decode_target:
+  env:
+    duckiebotssim:
+      use_randomized_synthetic_world: True
+      use_mask: False
+      separately_return_mask_and_rgb: True
+    duckiebotsreal:
+      use_mask: False
+  encoder: { mlp_keys: 'yaw_and_forward_vel', cnn_keys: 'image' }
+  decoder: { mlp_keys: 'yaw_and_forward_vel', cnn_keys: 'mask_image' }
+
+penalize_turning_less:
+  env:
+    duckiebotssim:
+      reward_function: penalize_turning_less
+
+no_turn_penalty:
+  env:
+    duckiebotssim:
+      reward_function: no_penalty
+
+strict_distance:
+  env:
+    duckiebotssim:
+      reward_function: strict_distance
+
+penalty4:
+  env:
+    duckiebotssim:
+      reward_function: penalty4
+
+four_envs:
+  envs: { amount: 4, parallel: process}
+  augment_image_workers: 64
+
+four_envs_32w:
+  envs: { amount: 4, parallel: process}
+  augment_image_workers: 32
+
+two_envs:
+  envs: { amount: 2, parallel: process}
+  augment_image_workers: 32
+
+random_exploration:
+  expl_behavior: Random
+  replay_size: 1e7
+  run:
+    script: train_eval
+    eval_every: 5e4
+    eval_eps: 100
+
+standard_rl_pretrain:
+  replay_size: 1e7
+  run:
+    script: train_eval
+    eval_every: 5e4
+    eval_eps: 100
+
+
+32_aug_w:
+  augment_image_workers: 32
+
+64_aug_w:
+  augment_image_workers: 64
+
+128_aug_w:
+  augment_image_workers: 128
+
+1_mem:
+  rssm: {residual_ensemble_size: 1}
+  grounded_rssm: {residual_ensemble_size: 1}
+  data_loaders: 0
+  data_load_prefetch_source: 10
+  data_load_prefetch_batch: 4
+
+fault_tol:
+  fault_tolerant_episodic_data_collection: True
+
+eval_expl_with_random_policy:
+  task_behavior: Random
+  expl_behavior: Random
+
+db_randomize_physics_every_step:
+  env:
+    duckiebotssim:
+      randomize_physics_every_step: True
+
+db_randomize_physics_every_episode:
+  env:
+    duckiebotssim:
+      randomize_physics_every_episode: True
+
+db_camera_shake:
+  env:
+    duckiebotssim:
+      camera_shake_with_random_physics: True
+
+
+db_facing_right_direction:
+  env:
+    duckiebotssim:
+      use_alt_game_path: "Linux_always_facing_right_direction"
+
+always_penalize_turning:
+  env:
+    duckiebotssim:
+      reward_function: always_penalize_turning

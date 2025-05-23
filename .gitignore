@@ -1,0 +1,15 @@
+.pytest_cache
+dist
+__pycache__/
+*.py[cod]
+*.egg-info
+MUJOCO_LOG.TXT
+;
+logdir/
+/logs/
+/log/
+/outputs/
+/scores/figs/
+
+.idea
+/MUJOCO_LOG.TXT
