@@ -1,6 +1,5 @@
 
 # Code for Adapting World Models with Latent-State Dynamics Residuals
-### Revised code coming soon!
 
 # Installation
 ```bash
